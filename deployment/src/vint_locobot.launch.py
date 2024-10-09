@@ -8,7 +8,7 @@ def generate_launch_description():
         # コマンドライン引数の宣言
         DeclareLaunchArgument(
             'config_file',
-            default_value='/home/racecar/vint_release/gnm-v2/deployment/config/cmd_vel_mux.yaml',
+            default_value='/ssd/source/navigation/visualnav-transformer-code_release/deployment/config/cmd_vel_mux.yaml',
             description='Path to the velocity multiplexer config file'
         ),
 
