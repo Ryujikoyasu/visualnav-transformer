@@ -26,7 +26,8 @@ subscribers:
     priority:    0
     short_desc:  "The default cmd_vel, controllers unaware that we are multiplexing cmd_vel should come here"
   - name:        "teleop"
-    topic:       "/cmd_vel_mux/input/teleop"
+    # topic:       "/cmd_vel_mux/input/teleop"
+    topic:       "/cmd_vel"
     timeout:     0.5
     priority:    2
     short_desc:  "Navigation stack controller"
