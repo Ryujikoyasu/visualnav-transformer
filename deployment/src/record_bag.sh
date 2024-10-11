@@ -25,7 +25,7 @@ tmux send-keys "python3 /home/ryuddi/ROS2/om_modbus_master_V201/src/om_modbus_ma
 # camera and joycon setup
 tmux select-pane -t 1
 tmux send-keys "ros2 run gstreamer_camera gstreamer_camera_node" Enter
-tmux send-keys "ros2 launch teleop_twist_joy teleop-launch.py" Enter
+tmux send-keys "ros2 launch teleop_twist_joy teleop-launch.py joy_vel:=/cmd_vel_mux/input/teleop" Enter
 
 # twist_mux node setup
 tmux select-pane -t 2
