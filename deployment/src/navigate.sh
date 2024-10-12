@@ -23,7 +23,7 @@ tmux send-keys "ros2 launch teleop_twist_joy teleop-launch.py joy_vel:=/cmd_vel_
 
 # Run the navigate.py script with command line args in the second pane
 tmux select-pane -t 1
-tmux send-keys "conda activate vint_deployment" Enter
+tmux send-keys "conda activate vint_deployment_py310" Enter
 tmux send-keys "python navigate.py $@" Enter
 
 # Run the joy_teleop.py script in the third pane
@@ -33,7 +33,7 @@ tmux send-keys "ros2 run twist_mux twist_mux --ros-args -p config_file:=/deploym
 
 # Run the pd_controller.py script in the fourth pane
 tmux select-pane -t 3
-tmux send-keys "conda activate vint_deployment" Enter
+tmux send-keys "conda activate vint_deployment_py310" Enter
 tmux send-keys "python pd_controller.py" Enter
 
 # Attach to the tmux session
