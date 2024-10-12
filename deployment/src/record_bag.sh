@@ -8,15 +8,16 @@ filename="rosbag_${timestamp}"
 session_name="record_bag_$(date +%s)"
 tmux new-session -d -s $session_name
 
-# ウィンドウを5つのペインに分割
+# ウィンドウを5つの同じサイズのペインに分割
 tmux selectp -t 0    # 最初のペインを選択
-tmux splitw -h -p 50 # 水平方向に分割してペイン1を作成
-tmux splitw -v -p 50 # 上部ペインを垂直方向に分割してペイン2を作成
-tmux selectp -1       # ペイン1を選択
-tmux splitw -v -p 50 # ペイン1を垂直方向に分割してペイン4を作成
-tmux selectp -2       # ペイン2を選択
-tmux splitw -v -p 50 # ペイン2を垂直方向に分割してペイン5を作成
-tmux selectp -0       # 最初のペインに戻る
+tmux splitw -h -p 66 # 水平方向に3分の2で分割
+tmux selectp -t 0    # 左側のペインを選択
+tmux splitw -h -p 50 # 左側を更に半分に分割
+tmux selectp -t 2    # 右側のペインを選択
+tmux splitw -v -p 66 # 垂直方向に3分の2で分割
+tmux selectp -t 2    # 上のペインを選択
+tmux splitw -v -p 50 # 上のペインを更に半分に分割
+tmux selectp -t 0    # 最初のペインに戻る
 
 # robot setup
 tmux select-pane -t 0
