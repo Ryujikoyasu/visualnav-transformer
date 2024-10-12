@@ -35,7 +35,7 @@ tmux send-keys "ros2 launch teleop_twist_joy teleop-launch.py joy_vel:=/cmd_vel_
 
 # twist_mux node setup
 tmux select-pane -t 4
-tmux send-keys "ros2 run twist_mux twist_mux --ros-args -p config_file:=/deployment/config/twist_mux.yaml" Enter
+tmux send-keys "ros2 run twist_mux twist_mux --ros-args -p config_file:=/ssd/source/navigation/visualnav-transformer/deployment/config/twist_mux.yaml" Enter
 
 # bag recording
 tmux select-pane -t 5

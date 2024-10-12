@@ -4,13 +4,15 @@
 session_name="teleop_locobot_$(date +%s)"
 tmux new-session -d -s $session_name
 
-# Split the window into four panes
+# Split the window into five panes
 tmux selectp -t 0    # select the first (0) pane
 tmux splitw -h -p 50 # split it into two halves horizontally
 tmux selectp -t 0    # select the left pane
 tmux splitw -v -p 50 # split the left pane into two halves vertically
 tmux selectp -t 2    # select the right pane
 tmux splitw -v -p 50 # split the right pane into two halves vertically
+tmux selectp -t 3    # select the bottom right pane
+tmux splitw -h -p 50 # split the bottom right pane into two halves horizontally
 
 # Run the ros2 launch command in the first pane
 tmux select-pane -t 0
@@ -27,6 +29,10 @@ tmux send-keys "ros2 run gstreamer_camera gstreamer_camera_node" Enter
 # Run the teleop-launch.py script in the fourth pane
 tmux select-pane -t 3
 tmux send-keys "ros2 launch teleop_twist_joy teleop-launch.py joy_vel:=/cmd_vel_mux/input/teleop" Enter
+
+# twist_mux node setup in the fifth pane
+tmux select-pane -t 4
+tmux send-keys "ros2 run twist_mux twist_mux --ros-args -p config_file:=/ssd/source/navigation/visualnav-transformer/deployment/config/twist_mux.yaml" Enter
 
 # Attach to the tmux session
 tmux -2 attach-session -t $session_name
