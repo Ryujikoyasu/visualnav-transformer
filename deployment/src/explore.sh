@@ -41,7 +41,7 @@ tmux send-keys "python explore.py $@" Enter
 
 # Run the twist_mux script in the sixth pane
 tmux select-pane -t 5
-tmux send-keys "ros2 run twist_mux twist_mux --ros-args -p config_file:=/ssd/source/navigation/visualnav-transformer/deployment/config/twist_mux.yaml" Enter
+tmux send-keys "ros2 run twist_mux_custom twist_mux_custom /ssd/source/navigation/visualnav-transformer/deployment/config/twist_mux.yaml" Enter
 
 # Run the pd_controller.py script in the seventh pane
 tmux select-pane -t 6
