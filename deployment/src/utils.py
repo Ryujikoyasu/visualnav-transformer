@@ -17,7 +17,6 @@ from PIL import Image as PILImage
 from typing import List, Tuple, Dict, Optional
 
 # models
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'train')))
 from vint_train.models.gnm.gnm import GNM
 from vint_train.models.vint.vint import ViNT
 
