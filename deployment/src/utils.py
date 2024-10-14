@@ -1,4 +1,3 @@
-
 import os
 import sys
 import io
@@ -18,7 +17,7 @@ from PIL import Image as PILImage
 from typing import List, Tuple, Dict, Optional
 
 # models
-sys.path.append('/ssd/source/navigation/visualnav-transformer/train')
+sys.path.append('../../train')
 from vint_train.models.gnm.gnm import GNM
 from vint_train.models.vint.vint import ViNT
 
