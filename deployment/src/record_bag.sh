@@ -9,14 +9,16 @@ session_name="record_bag_$(date +%s)"
 tmux new-session -d -s $session_name
 
 # ウィンドウを6つの同じサイズのペインに分割
-tmux selectp -t 0    # 最初のペインを選択
-tmux splitw -h -p 50 # 水平方向に半分で分割
-tmux selectp -t 0    # 左側のペインを選択
-tmux splitw -v -p 50 # 左側を垂直に半分に分割
-tmux selectp -t 2    # 右側のペインを選択
-tmux splitw -v -p 66 # 右側を垂直に3分の2で分割
-tmux selectp -t 3    # 右下のペインを選択
-tmux splitw -v -p 50 # 右下のペインを垂直に半分に分割
+# 最初のペインを2つに分割（上下）
+tmux split-window -v -t my_session:0.0
+# 上のペインを3つに分割（左右）
+tmux split-window -h -t my_session:0.0
+tmux split-window -h -t my_session:0.0
+# 下のペインを3つに分割（左右）
+tmux split-window -h -t my_session:0.3
+tmux split-window -h -t my_session:0.3
+# レイアウトを調整して等面積にする
+tmux select-layout -t my_session:0 tiled
 
 
 # robot setup
