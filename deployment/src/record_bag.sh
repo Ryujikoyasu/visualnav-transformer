@@ -14,10 +14,10 @@ tmux splitw -h -p 50 # 水平方向に半分で分割
 tmux selectp -t 0    # 左側のペインを選択
 tmux splitw -v -p 50 # 左側を垂直に半分に分割
 tmux selectp -t 2    # 右側のペインを選択
-tmux splitw -v -p 50 # 右側を垂直に半分に分割
-tmux selectp -t 4    # 下のペインを選択
-tmux splitw -h -p 50 # 下のペインを水平に半分に分割
-tmux selectp -t 0    # 最初のペインに戻る
+tmux splitw -v -p 66 # 右側を垂直に3分の2で分割
+tmux selectp -t 3    # 右下のペインを選択
+tmux splitw -v -p 50 # 右下のペインを垂直に半分に分割
+
 
 # robot setup
 tmux select-pane -t 0
