@@ -1,5 +1,10 @@
-import argparse
 import os
+import sys
+
+# trainディレクトリへの絶対パスを追加
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'train')))
+
+import argparse
 from utils import msg_to_pil 
 import time
 

@@ -17,7 +17,7 @@ from PIL import Image as PILImage
 from typing import List, Tuple, Dict, Optional
 
 # models
-sys.path.append('../../train')
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'train')))
 from vint_train.models.gnm.gnm import GNM
 from vint_train.models.vint.vint import ViNT
 
@@ -160,3 +160,4 @@ def transform_images(pil_imgs: List[PILImage.Image], image_size: List[int], cent
 # clip angle between -pi and pi
 def clip_angle(angle):
     return np.mod(angle + np.pi, 2 * np.pi) - np.pi
+
