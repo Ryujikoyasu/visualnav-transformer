@@ -8,8 +8,9 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import Joy
+import shutil
 
-IMAGE_TOPIC = "/usb_cam/image_raw"
+IMAGE_TOPIC = "/image_raw"
 TOPOMAP_IMAGES_DIR = "../topomaps/images"
 
 class CreateTopomap(Node):

@@ -10,7 +10,7 @@ tmux splitw -v -p 50 # split it into two halves
 
 # Run the create_topoplan.py script with command line args in the first pane
 tmux select-pane -t 0
-tmux send-keys "conda activate gnm_deployment_py310" Enter
+tmux send-keys "conda activate vint_deployment_py310" Enter
 tmux send-keys "python create_topomap.py --dt 1 --dir $1" Enter
 
 # Change the directory to ../topomaps/bags and run the ros2 bag play command in the second pane
