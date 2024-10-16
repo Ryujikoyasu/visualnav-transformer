@@ -1,0 +1,23 @@
+name: vint_deployment_2
+channels:
+- pytorch
+- conda-forge
+- nvidia
+dependencies:
+- python=3.10
+- cuda-toolkit=12.4
+- torchvision
+- numpy
+- matplotlib
+- pyyaml
+- rospkg
+- opencv
+- pip
+- pip:
+  - efficientnet_pytorch
+  - warmup_scheduler
+  - einops
+  - vit_pytorch
+  - diffusers
+  - wandb
+  - prettytable 
