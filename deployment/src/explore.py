@@ -72,9 +72,9 @@ class Exploration(Node):
 
         model_config_path = model_paths[self.args.model]["config_path"]
         with open(model_config_path, "r") as f:
-            model_params = yaml.safe_load(f)
+            self.model_params = yaml.safe_load(f)
 
-        self.context_size = model_params["context_size"]
+        self.context_size = self.model_params["context_size"]
 
         ckpth_path = model_paths[self.args.model]["ckpt_path"]
         if os.path.exists(ckpth_path):
@@ -82,13 +82,13 @@ class Exploration(Node):
         else:
             raise FileNotFoundError(f"Model weights not found at {ckpth_path}")
         
-        self.model = load_model(ckpth_path, model_params, device)
+        self.model = load_model(ckpth_path, self.model_params, device)
         self.model = self.model.to(device)
         self.model.eval()
 
-        num_diffusion_iters = model_params["num_diffusion_iters"]
+        num_diffusion_iters = self.model_params["num_diffusion_iters"]
         self.noise_scheduler = DDPMScheduler(
-            num_train_timesteps=model_params["num_diffusion_iters"],
+            num_train_timesteps=self.model_params["num_diffusion_iters"],
             beta_schedule='squaredcos_cap_v2',
             clip_sample=True,
             prediction_type='epsilon'
@@ -105,7 +105,11 @@ class Exploration(Node):
 
     def timer_callback(self):
         if len(self.context_queue) > self.context_size:
-            obs_images = transform_images(self.context_queue, self.model.image_size, center_crop=False)
+            # obs_images = transform_images(self.context_queue, self.model.image_size, center_crop=False)
+            # obs_images = obs_images.to(device)
+            obs_images = transform_images(self.context_queue, self.model_params["image_size"], center_crop=False)
+            obs_images = torch.split(obs_images, 3, dim=1)
+            obs_images = torch.cat(obs_images, dim=1) 
             obs_images = obs_images.to(device)
             fake_goal = torch.randn((1, 3, *self.model.image_size)).to(device)
             mask = torch.ones(1).long().to(device)
