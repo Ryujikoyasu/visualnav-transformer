@@ -4,17 +4,19 @@
 session_name="vint_locobot_$(date +%s)"
 tmux new-session -d -s $session_name
 
-# Split the window into six panes
-tmux selectp -t 0    # select the first (0) pane
-tmux splitw -h -p 66 # split it into two halves
-tmux selectp -t 0    # select the first (0) pane
-tmux splitw -h -p 50 # split it into two halves
-tmux selectp -t 0    # select the first (0) pane
-tmux splitw -v -p 50 # split it into two halves
-tmux selectp -t 3    # select the new, third (3) pane
-tmux splitw -v -p 66 # split it into two halves
-tmux selectp -t 3    # select the new, third (3) pane
-tmux splitw -v -p 50 # split it into two halves
+# 最初のペインを2つに分割（上下）
+tmux split-window -v -t my_session:0.0
+# 上のペインを3つに分割（左右）
+tmux split-window -h -t my_session:0.0
+tmux split-window -h -t my_session:0.0
+# 下のペインを2つに分割（左右）
+tmux split-window -h -t my_session:0.3
+# 左下のペインを上下に分割
+tmux split-window -v -t my_session:0.3
+# 右下のペインを上下に分割
+tmux split-window -v -t my_session:0.4
+# レイアウトを調整
+tmux select-layout -t my_session:0 tiled
 
 # Run the ros2 launch command in the first pane
 tmux select-pane -t 0
@@ -34,7 +36,7 @@ tmux send-keys "ros2 launch teleop_twist_joy teleop-launch.py joy_vel:=/cmd_vel_
 
 # Run the navigate.py script with command line args in the fifth pane
 tmux select-pane -t 4
-tmux send-keys "conda activate vint_deployment_py310" Enter
+tmux send-keys "conda activate vint_deployment_2" Enter
 tmux send-keys "python navigate.py $@" Enter
 
 # Run the twist_mux script in the sixth pane
@@ -43,7 +45,7 @@ tmux send-keys "ros2 run twist_mux_custom twist_mux_custom /ssd/source/navigatio
 
 # Run the pd_controller.py script in the seventh pane
 tmux select-pane -t 6
-tmux send-keys "conda activate vint_deployment_py310" Enter
+tmux send-keys "conda activate vint_deployment_2" Enter
 tmux send-keys "python pd_controller.py" Enter
 
 # Attach to the tmux session

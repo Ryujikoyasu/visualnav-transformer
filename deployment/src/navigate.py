@@ -9,14 +9,6 @@ from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 import matplotlib.pyplot as plt
 import yaml
 
-sys.path.extend([
-    '/ssd/ros2_ws/install/gstreamer_camera/lib/python3.10/site-packages',
-    '/home/ryuddi/ROS2/om_modbus_master_V201/install/om_msgs/local/lib/python3.10/dist-packages',
-    '/opt/ros/humble/lib/python3.10/site-packages',
-    '/opt/ros/humble/local/lib/python3.10/site-packages',
-    '/usr/lib/python3.10/dist-packages/',
-])
-
 # ROS 2
 import rclpy
 from rclpy.node import Node
