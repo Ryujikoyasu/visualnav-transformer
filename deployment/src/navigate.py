@@ -1,3 +1,8 @@
+# python navigate.py --model <model_name> -—dir <topomap_dir>: 
+# This python script starts a node that reads in image observations from the /image_raw topic, 
+# inputs the observations and the map into the model, 
+# and publishes actions to the /waypoint topic.
+
 import matplotlib.pyplot as plt
 import sys, os
 from typing import Tuple, Sequence, Dict, Union, Optional, Callable

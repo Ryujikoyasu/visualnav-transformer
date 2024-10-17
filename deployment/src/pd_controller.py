@@ -1,3 +1,7 @@
+# python pd_controller.py:
+# This python script starts a node that reads messages from the /waypoint topic (waypoints from the model) 
+# and outputs velocities to navigate the robot’s base.
+
 import numpy as np
 import yaml
 from typing import Tuple
