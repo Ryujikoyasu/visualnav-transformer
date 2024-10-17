@@ -5,14 +5,14 @@ session_name="teleop_locobot_$(date +%s)"
 tmux new-session -d -s $session_name
 
 # 最初のペインを2つに分割（上下）
-tmux split-window -v -t my_session:0.0
+tmux split-window -v -t $session_name:0.0
 # 上のペインを3つに分割（左右）
-tmux split-window -h -t my_session:0.0
-tmux split-window -h -t my_session:0.0
+tmux split-window -h -t $session_name:0.0
+tmux split-window -h -t $session_name:0.0
 # 下のペインを2つに分割（左右）
-tmux split-window -h -t my_session:0.3
+tmux split-window -h -t $session_name:0.3
 # レイアウトを調整
-tmux select-layout -t my_session:0 tiled
+tmux select-layout -t $session_name:0 tiled
 
 
 # Run the ros2 launch command in the first pane

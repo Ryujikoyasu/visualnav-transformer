@@ -10,15 +10,15 @@ tmux new-session -d -s $session_name
 
 # ウィンドウを6つの同じサイズのペインに分割
 # 最初のペインを2つに分割（上下）
-tmux split-window -v -t my_session:0.0
+tmux split-window -v -t $session_name:0.0
 # 上のペインを3つに分割（左右）
-tmux split-window -h -t my_session:0.0
-tmux split-window -h -t my_session:0.0
+tmux split-window -h -t $session_name:0.0
+tmux split-window -h -t $session_name:0.0
 # 下のペインを3つに分割（左右）
-tmux split-window -h -t my_session:0.3
-tmux split-window -h -t my_session:0.3
+tmux split-window -h -t $session_name:0.3
+tmux split-window -h -t $session_name:0.3
 # レイアウトを調整して等面積にする
-tmux select-layout -t my_session:0 tiled
+tmux select-layout -t $session_name:0 tiled
 
 
 # robot setup
