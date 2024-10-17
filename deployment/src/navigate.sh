@@ -37,7 +37,7 @@ tmux send-keys "ros2 launch teleop_twist_joy teleop-launch.py joy_vel:=/cmd_vel_
 # Run the navigate.py script with command line args in the fifth pane
 tmux select-pane -t 6
 tmux send-keys "conda activate vint_deployment_2" Enter
-tmux send-keys "python navigate.py $@" Enter
+tmux send-keys "python navigate.py $(printf '%q ' "$@")" Enter
 
 # Run the twist_mux script in the sixth pane
 tmux select-pane -t 5
