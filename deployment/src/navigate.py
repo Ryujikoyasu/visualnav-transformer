@@ -140,7 +140,7 @@ class Navigation(Node):
 
             self.reached_goal = self.closest_node == self.goal_node
             goal_msg = Bool()
-            goal_msg.data = self.reached_goal
+            goal_msg.data = bool(self.reached_goal)  # ここを変更
             self.goal_pub.publish(goal_msg)
 
             if self.reached_goal:
@@ -289,8 +289,6 @@ def main(args=None):
     )
     args = parser.parse_args()
     print(f"Using {device}")
-
-    navigation = Navigation(args)
     
     try:
         rclpy.spin(navigation)

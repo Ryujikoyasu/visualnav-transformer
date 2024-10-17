@@ -55,8 +55,6 @@ class Exploration(Node):
         self.context_size = None
         self.model = None
         self.noise_scheduler = None
-        self.image_size = None
-        self.len_traj_pred = None  # 新しい属性を追加
 
         self.image_sub = self.create_subscription(
             Image, IMAGE_TOPIC, self.callback_obs, 1)
@@ -88,10 +86,6 @@ class Exploration(Node):
         self.model = self.model.to(device)
         self.model.eval()
 
-        # モデルの設定から image_size と len_traj_pred を取得
-        self.image_size = model_params.get("image_size", (128, 128))
-        self.len_traj_pred = model_params.get("len_traj_pred", 5)  # デフォルト値を設定
-
         num_diffusion_iters = model_params["num_diffusion_iters"]
         self.noise_scheduler = DDPMScheduler(
             num_train_timesteps=model_params["num_diffusion_iters"],
@@ -111,9 +105,9 @@ class Exploration(Node):
 
     def timer_callback(self):
         if len(self.context_queue) > self.context_size:
-            obs_images = transform_images(self.context_queue, self.image_size, center_crop=False)
+            obs_images = transform_images(self.context_queue, self.model.image_size, center_crop=False)
             obs_images = obs_images.to(device)
-            fake_goal = torch.randn((1, 3, *self.image_size)).to(device)
+            fake_goal = torch.randn((1, 3, *self.model.image_size)).to(device)
             mask = torch.ones(1).long().to(device)
 
             with torch.no_grad():
@@ -125,7 +119,7 @@ class Exploration(Node):
                     obs_cond = obs_cond.repeat(self.args.num_samples, 1, 1)
                 
                 noisy_action = torch.randn(
-                    (self.args.num_samples, self.len_traj_pred, 2), device=device)
+                    (self.args.num_samples, self.model.len_traj_pred, 2), device=device)
                 naction = noisy_action
 
                 self.noise_scheduler.set_timesteps(self.model.num_diffusion_iters)
