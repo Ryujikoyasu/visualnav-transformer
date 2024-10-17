@@ -290,6 +290,8 @@ def main(args=None):
     args = parser.parse_args()
     print(f"Using {device}")
     
+    navigation = Navigation(args)  # ここでNavigationクラスのインスタンスを作成
+    
     try:
         rclpy.spin(navigation)
     except KeyboardInterrupt:
