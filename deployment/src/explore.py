@@ -123,10 +123,10 @@ class Exploration(Node):
                     obs_cond = obs_cond.repeat(self.args.num_samples, 1, 1)
                 
                 noisy_action = torch.randn(
-                    (self.args.num_samples, self.model.len_traj_pred, 2), device=device)
+                    (self.args.num_samples, self.model_params["len_traj_pred"], 2), device=device)
                 naction = noisy_action
 
-                self.noise_scheduler.set_timesteps(self.model.num_diffusion_iters)
+                self.noise_scheduler.set_timesteps(self.model_params["num_diffusion_iters"])
 
                 start_time = time.time()
                 for k in self.noise_scheduler.timesteps[:]:
@@ -154,7 +154,7 @@ class Exploration(Node):
 
             chosen_waypoint = naction[self.args.waypoint]
 
-            if self.model.normalize:
+            if self.model_params["normalize"]:
                 chosen_waypoint *= (MAX_V / RATE)
             waypoint_msg = Float32MultiArray()
             waypoint_msg.data = chosen_waypoint.tolist()
