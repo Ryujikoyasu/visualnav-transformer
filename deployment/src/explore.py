@@ -111,7 +111,7 @@ class Exploration(Node):
             obs_images = torch.split(obs_images, 3, dim=1)
             obs_images = torch.cat(obs_images, dim=1) 
             obs_images = obs_images.to(device)
-            fake_goal = torch.randn((1, 3, *self.model.image_size)).to(device)
+            fake_goal = torch.randn((1, 3, *self.model_params["image_size"])).to(device)
             mask = torch.ones(1).long().to(device)
 
             with torch.no_grad():
