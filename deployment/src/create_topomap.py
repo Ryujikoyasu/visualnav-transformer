@@ -1,5 +1,6 @@
 import os
 import sys
+import numpy as np
 
 import argparse
 from utils import msg_to_pil 
@@ -51,7 +52,8 @@ class CreateTopomap(Node):
     def callback_obs(self, msg: Image):
         pil_img = msg_to_pil(msg)
         # RGBからBGRに変換
-        self.obs_img = PILImage.fromarray(pil_img.convert('RGB').__array__()[:, :, ::-1])
+        rgb_array = np.array(pil_img.convert('RGB'))
+        self.obs_img = PILImage.fromarray(rgb_array[:, :, ::-1])
 
     def callback_joy(self, msg: Joy):
         if msg.buttons[0]:
@@ -61,7 +63,8 @@ class CreateTopomap(Node):
     def timer_callback(self):
         if self.obs_img is not None:
             # BGRからRGBに戻して保存
-            rgb_img = PILImage.fromarray(self.obs_img.__array__()[:, :, ::-1])
+            bgr_array = np.array(self.obs_img)
+            rgb_img = PILImage.fromarray(bgr_array[:, :, ::-1])
             rgb_img.save(os.path.join(self.topomap_name_dir, f"{self.i}.png"))
             print("published image", self.i)
             self.i += 1
