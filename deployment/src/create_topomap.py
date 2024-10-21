@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy as np
+import cv2
 
 import argparse
 from utils import msg_to_pil 
@@ -50,10 +51,11 @@ class CreateTopomap(Node):
                 print("Failed to delete %s. Reason: %s" % (file_path, e))
 
     def callback_obs(self, msg: Image):
-        pil_img = msg_to_pil(msg)
-        # RGBからBGRに変換
-        rgb_array = np.array(pil_img.convert('RGB'))
-        self.obs_img = PILImage.fromarray(rgb_array[:, :, ::-1])
+        # ROSのImage メッセージからnumpy配列に変換
+        np_arr = np.frombuffer(msg.data, dtype=np.uint8).reshape(msg.height, msg.width, -1)
+        # BGRからRGBに変換
+        rgb_img = cv2.cvtColor(np_arr, cv2.COLOR_BGR2RGB)
+        self.obs_img = PILImage.fromarray(rgb_img)
 
     def callback_joy(self, msg: Joy):
         if msg.buttons[0]:
@@ -62,10 +64,8 @@ class CreateTopomap(Node):
 
     def timer_callback(self):
         if self.obs_img is not None:
-            # BGRからRGBに戻して保存
-            bgr_array = np.array(self.obs_img)
-            rgb_img = PILImage.fromarray(bgr_array[:, :, ::-1])
-            rgb_img.save(os.path.join(self.topomap_name_dir, f"{self.i}.png"))
+            # 既にRGB形式なので、そのまま保存
+            self.obs_img.save(os.path.join(self.topomap_name_dir, f"{self.i}.png"))
             print("published image", self.i)
             self.i += 1
             self.start_time = time.time()
