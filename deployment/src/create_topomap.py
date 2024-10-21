@@ -4,6 +4,7 @@ import sys
 import argparse
 from utils import msg_to_pil 
 import time
+from PIL import Image as PILImage
 
 # ROS 2
 import rclpy
@@ -48,7 +49,9 @@ class CreateTopomap(Node):
                 print("Failed to delete %s. Reason: %s" % (file_path, e))
 
     def callback_obs(self, msg: Image):
-        self.obs_img = msg_to_pil(msg)
+        pil_img = msg_to_pil(msg)
+        # RGBからBGRに変換
+        self.obs_img = PILImage.fromarray(pil_img.convert('RGB').__array__()[:, :, ::-1])
 
     def callback_joy(self, msg: Joy):
         if msg.buttons[0]:
@@ -57,7 +60,9 @@ class CreateTopomap(Node):
 
     def timer_callback(self):
         if self.obs_img is not None:
-            self.obs_img.save(os.path.join(self.topomap_name_dir, f"{self.i}.png"))
+            # BGRからRGBに戻して保存
+            rgb_img = PILImage.fromarray(self.obs_img.__array__()[:, :, ::-1])
+            rgb_img.save(os.path.join(self.topomap_name_dir, f"{self.i}.png"))
             print("published image", self.i)
             self.i += 1
             self.start_time = time.time()
