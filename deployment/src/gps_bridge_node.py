@@ -6,21 +6,18 @@ from geometry_msgs.msg import PoseStamped
 import json
 import websockets
 import asyncio
-import threading
 
 class GPSBridgeNode(Node):
+    # クラス変数として定義
+    clients = set()
+    current_position = None
+    goal_position = None
+
     def __init__(self):
         super().__init__('gps_bridge_node')
-        
-        # クラス変数の初期化
-        self.clients = set()
-        self.current_position = None
-        self.goal_position = None
-        
-        # サブスクリプションの設定
         self.gps_subscription = self.create_subscription(
             NavSatFix,
-            '/gps/fix',
+            '/fix',
             self.gps_callback,
             10
         )
@@ -31,25 +28,20 @@ class GPSBridgeNode(Node):
             10
         )
         
-        # WebSocketサーバーの起動
-        self.server = None
-        threading.Thread(target=self.run_websocket_server, daemon=True).start()
-        
-    async def start_server(self):
-        self.server = await websockets.serve(self.ws_handler, "localhost", 8765)
-        await self.server.wait_closed()
-    
-    def run_websocket_server(self):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.start_server())
-        loop.run_forever()
+        # WebSocketサーバーの設定
+        self.websocket_server = None
+        self.create_timer(1.0, self.start_websocket_server)
+
+    async def start_websocket_server(self):
+        if self.websocket_server is None:
+            self.websocket_server = await websockets.serve(self.ws_handler, "localhost", 8765)
+            self.get_logger().info("WebSocket server started")
 
     async def ws_handler(self, websocket, path):
         self.clients.add(websocket)
         try:
             while True:
-                await websocket.recv()  # クライアントからのメッセージを待機
+                await websocket.recv()
         except websockets.exceptions.ConnectionClosed:
             self.clients.remove(websocket)
 
@@ -80,26 +72,21 @@ class GPSBridgeNode(Node):
             'goal': self.goal_position
         }
         
-        asyncio.run(self.send_to_all(json.dumps(data)))
+        asyncio.create_task(self.send_to_all(json.dumps(data)))
 
     async def send_to_all(self, message):
         if self.clients:
-            await asyncio.wait([
-                client.send(message)
-                for client in self.clients
-            ])
+            await asyncio.gather(*[client.send(message) for client in self.clients])
 
-def main(args=None):
+async def main(args=None):
     rclpy.init(args=args)
     node = GPSBridgeNode()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
+    
+    while rclpy.ok():
+        rclpy.spin_once(node, timeout_sec=0.1)
+        await asyncio.sleep(0.1)
+    
+    rclpy.shutdown()
 
-        
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
