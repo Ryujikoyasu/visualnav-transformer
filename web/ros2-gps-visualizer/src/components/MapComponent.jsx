@@ -2,7 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { connectWebSocket } from '../services/websocketService';
+
+let DefaultIcon = L.icon({
+  iconUrl: icon,
+  shadowUrl: iconShadow,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 // マーカーアイコンの設定
 const currentPositionIcon = new L.Icon({
@@ -45,7 +56,7 @@ const MapComponent = () => {
       if (currentPosition) {
         map.setView(currentPosition, map.getZoom());
       }
-    }, [currentPosition, map]);
+    }, [map, currentPosition]); // currentPositionを依存配列に追加
     
     return null;
   };
@@ -58,9 +69,8 @@ const MapComponent = () => {
         className="h-full w-full"
       >
         <TileLayer
-          url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
-          maxZoom={20}
-          subdomains={['mt0', 'mt1', 'mt2', 'mt3']}
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
         <MapUpdater />
