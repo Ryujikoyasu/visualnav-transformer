@@ -25,12 +25,12 @@ class TwistDataset(Dataset):
         timestamp = self.timestamps[idx]
         
         # 画像の読み込み
-        img_path = os.path.join(self.data_dir, f'{timestamp}_image.jpg')
+        img_path = os.path.join(self.data_dir, 'images', f'{timestamp}.jpg')
         image = cv2.imread(img_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
         # Twistデータの読み込み
-        twist_path = os.path.join(self.data_dir, f'{timestamp}_twist.txt')
+        twist_path = os.path.join(self.data_dir, 'twists', f'{timestamp}.txt')
         with open(twist_path, 'r') as f:
             twist_data = [float(x) for x in f.read().split(',')]
         
