@@ -35,19 +35,19 @@ tmux send-keys "ros2 run gstreamer_camera gstreamer_camera_node" Enter
 tmux select-pane -t 3
 tmux send-keys "ros2 launch teleop_twist_joy teleop-launch.py joy_vel:=/cmd_vel_mux/input/teleop" Enter
 
-# Run the explore.py script with command line args in the fifth pane
-tmux select-pane -t 6
+# Run the pd_controller.py script in the seventh pane
+tmux select-pane -t 4
 tmux send-keys "conda activate vint_deployment_2" Enter
-tmux send-keys "python explore.py $(printf '%q ' "$@")" Enter
+tmux send-keys "python pd_controller.py" Enter
 
 # Run the twist_mux script in the sixth pane
 tmux select-pane -t 5
 tmux send-keys "ros2 run twist_mux_custom twist_mux_custom /ssd/source/navigation/visualnav-transformer/deployment/config/twist_mux.yaml" Enter
 
-# Run the pd_controller.py script in the seventh pane
-tmux select-pane -t 4
+# Run the explore.py script with command line args in the fifth pane
+tmux select-pane -t 6
 tmux send-keys "conda activate vint_deployment_2" Enter
-tmux send-keys "python pd_controller.py" Enter
+tmux send-keys "python explore.py $(printf '%q ' "$@")" Enter
 
 # Attach to the tmux session
 tmux -2 attach-session -t $session_name
