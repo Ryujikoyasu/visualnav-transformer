@@ -4,9 +4,9 @@ defaults:
 # データセット設定の更新
 datasets:
   twist_data:
-    data_folder: /ssd/source/navigation/visualnav-transformer/train/vint_train/data/nomad_adapter_dataset/raw_data
-    train: /ssd/source/navigation/visualnav-transformer/train/vint_train/data/nomad_adapter_dataset/data_splits/twist_data/train/
-    test: /ssd/source/navigation/visualnav-transformer/train/vint_train/data/nomad_adapter_dataset/data_splits/twist_data/test/
+    data_folder: /ssd/source/navigation/asset/nomad_adapter_dataset/raw_data/raw_data4.0hz
+    train: /ssd/source/navigation/asset/nomad_adapter_dataset/raw_data4.0hz/processed_data
+    # test: /ssd/source/navigation/visualnav-transformer/train/vint_train/data/nomad_adapter_dataset/data_splits/twist_data/test/
 
 # Twist出力用のパラメータ
 action:
