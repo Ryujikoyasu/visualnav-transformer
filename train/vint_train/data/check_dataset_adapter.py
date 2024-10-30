@@ -55,5 +55,5 @@ def downsample_dataset(data_dir, target_hz=4.0):
     return output_dir
 
 if __name__ == "__main__":
-    data_dir = "/path/to/your/raw_data"  # データセットのパスを指定
+    data_dir = "//ssd/source/navigation/visualnav-transformer/train/vint_train/data/nomad_adapter_dataset/raw_data"  # データセットのパスを指定
     downsample_dataset(data_dir, target_hz=4.0)
