@@ -17,7 +17,7 @@ class DataCollector(Node):
         # コマンドライン引数でも指定できるように
         parser = argparse.ArgumentParser()
         parser.add_argument('--save_dir', type=str, 
-                           default='~/nomad_dataset/raw_data',
+                           default='/ssd/source/navigation/visualnav-transformer/train/vint_train/data/nomad_adapter_dataset/raw_data',
                            help='データの保存先ディレクトリ')
         args, _ = parser.parse_known_args()
         
@@ -36,7 +36,7 @@ class DataCollector(Node):
         self.frame_count = 0
         
         # Subscriberの設定
-        self.image_sub = Subscriber(self, Image, '/img_raw')
+        self.image_sub = Subscriber(self, Image, '/image_raw')
         self.twist_sub = Subscriber(self, Twist, '/cmd_vel_mux/input/teleop')
         
         # 同期設定
