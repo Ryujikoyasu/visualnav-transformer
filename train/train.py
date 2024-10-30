@@ -34,6 +34,7 @@ from vint_train.training.train_eval_loop import (
     train_eval_loop_nomad,
     load_model,
 )
+from vint_train.training.train_eval_loop_adapter import train_eval_loop_nomad_adapter
 
 
 def main(config):
@@ -216,6 +217,17 @@ def main(config):
             beta_schedule='squaredcos_cap_v2',
             clip_sample=True,
             prediction_type='epsilon'
+        )
+    elif config["model_type"] == "nomad_adapter":
+        # ベースモデルのロード
+        base_model = NoMaD(...)  # 必要なパラメータを設定
+        base_model.load_state_dict(torch.load(config['load_run']))
+        
+        metrics = train_eval_loop_nomad_adapter(
+            train_model=not args.eval,
+            base_model=base_model,
+            adapter_bottleneck_dim=config['adapter_bottleneck_dim'],
+            **config['train_params']
         )
     else:
         raise ValueError(f"Model {config['model']} not supported")
