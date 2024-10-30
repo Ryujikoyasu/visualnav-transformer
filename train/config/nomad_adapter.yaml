@@ -1,0 +1,15 @@
+# nomad.yamlを継承
+defaults:
+  - nomad
+
+# Adapter固有の設定を追加
+adapter:
+  bottleneck_dim: 64
+  lr: 1e-4
+
+# 学習率は通常より小さめに設定
+lr: 1e-4
+
+# プロジェクト名を変更
+project_name: nomad_adapter
+run_name: nomad_adapter 

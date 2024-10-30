@@ -1,0 +1,14 @@
+defaults:
+  - nomad_adapter
+
+# データセット設定の更新
+datasets:
+  twist_data:
+    data_folder: /home/<username>/nomad_dataset/raw_data
+    train: /home/<username>/data_splits/twist_data/train/
+    test: /home/<username>/data_splits/twist_data/test/
+
+# Twist出力用のパラメータ
+action:
+  linear_scale: 1.0  # 線形速度のスケール
+  angular_scale: 1.0  # 角速度のスケール 
