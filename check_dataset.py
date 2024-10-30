@@ -23,4 +23,4 @@ def check_dataset(data_dir):
             print(f"Twistデータ: {twist_data}")
 
 if __name__ == '__main__':
-    check_dataset('/path/to/save/directory') 
+    check_dataset('/path/to/save/directory')

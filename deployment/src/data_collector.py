@@ -5,7 +5,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge
-from message_filters import ApproximateTimeSynchronizer, Subscriber  # ここを修正
+from message_filters import ApproximateTimeSynchronizer, Subscriber
 
 class DataCollector(Node):
     def __init__(self):
@@ -40,4 +40,4 @@ class DataCollector(Node):
             slop=0.1,
             allow_headerless=True
         )
-        self.sync.registerCallback(self.sync_callback)
+        self.sync.registerCallback(self.sync_callback) 
