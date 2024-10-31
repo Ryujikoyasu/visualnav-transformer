@@ -53,6 +53,9 @@ use_wandb: True
 normalize: True
 goal_type: "image"
 
+# ゴールマスクを常に適用
+goal_mask_prob: 1.0  # 探索タスク用に常にマスク
+
 # 学習率スケジューラの設定
 scheduler:
   name: "cosine"

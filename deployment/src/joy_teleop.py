@@ -1,77 +1,68 @@
-import yaml
+#!/usr/bin/env python3
 
-# ROS 2
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import Joy
-from std_msgs.msg import Bool
+import pygame
+import sys
 
-from topic_names import JOY_BUMPER_TOPIC
+class JoyTeleop(Node):
+    def __init__(self):
+        super().__init__('joy_teleop')
+        
+        # パブリッシャーの設定
+        self.publisher = self.create_publisher(
+            Twist,
+            '/cmd_vel_mux/input/teleop',
+            10
+        )
+        
+        # Pygameの初期化
+        pygame.init()
+        pygame.joystick.init()
+        
+        # ジョイスティックの接続確認
+        try:
+            self.joystick = pygame.joystick.Joystick(0)
+            self.joystick.init()
+            self.get_logger().info('ジョイスティックが接続されました')
+        except pygame.error:
+            self.get_logger().error('ジョイスティックが見つかりません')
+            sys.exit(1)
+            
+        # 制御パラメータ
+        self.linear_speed = 0.5  # 直進速度の最大値
+        self.angular_speed = 1.0  # 回転速度の最大値
+        
+        # タイマーの設定（20Hz）
+        self.create_timer(0.05, self.timer_callback)
 
-CONFIG_PATH = "../config/robot.yaml"
-with open(CONFIG_PATH, "r") as f:
-	robot_config = yaml.safe_load(f)
-MAX_V = 0.4
-MAX_W = 0.8
-VEL_TOPIC = robot_config["vel_teleop_topic"]
-JOY_CONFIG_PATH = "../config/joystick.yaml"
-with open(JOY_CONFIG_PATH, "r") as f:
-	joy_config = yaml.safe_load(f)
-DEADMAN_SWITCH = joy_config["deadman_switch"] # button index
-LIN_VEL_BUTTON = joy_config["lin_vel_button"]
-ANG_VEL_BUTTON = joy_config["ang_vel_button"]
-RATE = 9
+    def timer_callback(self):
+        # イベントの処理
+        pygame.event.pump()
+        
+        # Twistメッセージの作成
+        msg = Twist()
+        
+        # 左スティックの値を取得
+        msg.linear.x = -self.joystick.get_axis(1) * self.linear_speed  # 前後移動
+        msg.angular.z = -self.joystick.get_axis(0) * self.angular_speed  # 回転
+        
+        # 速度指令値をパブリッシュ
+        self.publisher.publish(msg)
 
-class Joy2Locobot(Node):
-	def __init__(self):
-		super().__init__("Joy2Locobot")
-		self.vel_pub = self.create_publisher(Twist, VEL_TOPIC, 1)
-		self.bumper_pub = self.create_publisher(Bool, JOY_BUMPER_TOPIC, 1)
-		self.joy_sub = self.create_subscription(Joy, "joy", self.callback_joy, 1)
-		self.vel_msg = Twist()
-		self.button = None
-		self.bumper = False
-		self.timer = self.create_timer(1.0 / RATE, self.timer_callback)
+def main():
+    rclpy.init()
+    node = JoyTeleop()
+    
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+        pygame.quit()
 
-	def callback_joy(self, data: Joy):
-		"""Callback function for the joystick subscriber"""
-		self.button = data.buttons[DEADMAN_SWITCH] 
-		bumper_button = data.buttons[DEADMAN_SWITCH - 1]
-		if self.button is not None: # hold down the dead-man switch to teleop the robot
-			self.vel_msg.linear.x = MAX_V * data.axes[LIN_VEL_BUTTON]
-			self.vel_msg.angular.z = MAX_W * data.axes[ANG_VEL_BUTTON]    
-		else:
-			self.vel_msg = Twist()
-			self.vel_pub.publish(self.vel_msg)
-		if bumper_button is not None:
-			self.bumper = bool(data.buttons[DEADMAN_SWITCH - 1])
-		else:
-			self.bumper = False
-
-	def timer_callback(self):
-		if self.button:
-			self.get_logger().info(f"Teleoperating the robot:\n {self.vel_msg}")
-			self.vel_pub.publish(self.vel_msg)
-		bumper_msg = Bool()
-		bumper_msg.data = self.bumper
-		self.bumper_pub.publish(bumper_msg)
-		if self.bumper:
-			self.get_logger().info("Bumper pressed!")
-
-def main(args=None):
-	rclpy.init(args=args)
-	joy2locobot = Joy2Locobot()
-	joy2locobot.get_logger().info("Registered with master node. Waiting for joystick input...")
-	
-	try:
-		rclpy.spin(joy2locobot)
-	except KeyboardInterrupt:
-		pass
-	finally:
-		joy2locobot.destroy_node()
-		rclpy.shutdown()
-
-if __name__ == "__main__":
-	main()
-
+if __name__ == '__main__':
+    main()

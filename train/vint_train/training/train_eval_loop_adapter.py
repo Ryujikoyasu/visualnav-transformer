@@ -93,8 +93,8 @@ def train_eval_loop_nomad_adapter(
                 timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (twists.shape[0],), device=device).long()
                 noisy_twists = noise_scheduler.add_noise(twists, noise, timesteps)
                 
-                # モデルの予測
-                noise_pred = model(images, noisy_twists, timesteps)
+                # モデルの予測（ゴール情報なし）
+                noise_pred = model(images, noisy_twists, timesteps)  # goal_mask引数を削除
                 
                 # 損失の計算
                 loss = torch.nn.functional.mse_loss(noise_pred, noise)
@@ -154,13 +154,15 @@ def train_eval_loop_nomad_adapter(
                         images = test_batch['image'].to(device)
                         twists = test_batch['twist'].to(device)
                         
-                        # ノイズの追加とモデルの予測
+                        # 評価時もゴール画像を常にマスク
+                        goal_mask = torch.ones(images.shape[0], 1, device=device)
+                        
                         noise = torch.randn_like(twists)
                         timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (twists.shape[0],), device=device).long()
                         noisy_twists = noise_scheduler.add_noise(twists, noise, timesteps)
                         
-                        # モデルの予測
-                        noise_pred = ema_model.averaged_model(images, noisy_twists, timesteps)
+                        # ゴールマスクを追加
+                        noise_pred = ema_model.averaged_model(images, noisy_twists, timesteps, goal_mask=goal_mask)
                         
                         # 損失の計算
                         loss = torch.nn.functional.mse_loss(noise_pred, noise)
