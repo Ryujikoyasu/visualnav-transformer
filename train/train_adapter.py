@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torchvision import transforms
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+from omegaconf import OmegaConf
 
 from vint_train.models.nomad.nomad import NoMaD, DenseNetwork
 from vint_train.models.nomad.nomad_vint import NoMaD_ViNT, replace_bn_with_gn
@@ -134,9 +135,11 @@ if __name__ == "__main__":
     parser.add_argument("--config", "-c", default="config/nomad_adapter.yaml")
     args = parser.parse_args()
     
-    # 設定の読み込み
-    with open(args.config, "r") as f:
-        config = yaml.safe_load(f)
+    # OmegaConfを使用して設定を読み込む
+    config = OmegaConf.load(args.config)
+    
+    # 必要に応じてdictに変換
+    config = OmegaConf.to_container(config, resolve=True)
     
     # WandBの設定
     # if config["use_wandb"]:
