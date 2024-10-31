@@ -47,7 +47,7 @@ def main(config):
     
     test_loader = DataLoader(
         test_dataset,
-        batch_size=config["eval_batch_size"],
+        batch_size=config["batch_size"],
         shuffle=False,
         num_workers=0,
     )
