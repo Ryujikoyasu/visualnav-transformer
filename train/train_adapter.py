@@ -79,8 +79,20 @@ def main(config):
     
     # 事前学習済みの重みをロード
     checkpoint = torch.load(config["pretrained_path"])
-    base_model.load_state_dict(checkpoint["model_state_dict"])
+    # チェックポイントの構造をチェックして適切にロード
+    if "model_state_dict" in checkpoint:
+        state_dict = checkpoint["model_state_dict"]
+    elif "state_dict" in checkpoint:
+        state_dict = checkpoint["state_dict"]
+    else:
+        state_dict = checkpoint  # チェックポイントそのものがstate_dictの場合
+    
+    base_model.load_state_dict(state_dict)
     print(f"Loaded pretrained model from {config['pretrained_path']}")
+    
+    # デバッグ用：チェックポイントの構造を確認
+    checkpoint = torch.load(config["pretrained_path"])
+    print("Checkpoint keys:", checkpoint.keys())
     
     # Adapterモデルの作成
     model = NoMaDAdapter(

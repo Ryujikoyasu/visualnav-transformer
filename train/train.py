@@ -217,23 +217,6 @@ def main(config):
             clip_sample=True,
             prediction_type='epsilon'
         )
-    elif config["model_type"] == "nomad_adapter":
-        # Twist用のデータセットを読み込む
-        train_dataset = TwistDataset(
-            data_dir=config["datasets"]["twist_data"]["train"],
-            transform=transform
-        )
-        
-        test_dataloaders["twist_test"] = DataLoader(
-            TwistDataset(
-                data_dir=config["datasets"]["twist_data"]["test"],
-                transform=transform
-            ),
-            batch_size=config["eval_batch_size"],
-            shuffle=True,
-            num_workers=0,
-            drop_last=False,
-        )
     else:
         raise ValueError(f"Model {config['model']} not supported")
 
