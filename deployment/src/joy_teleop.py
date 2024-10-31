@@ -31,6 +31,7 @@ class JoyTeleop(Node):
             self.get_logger().info(f'ジョイスティック名: {self.joystick.get_name()}')
             self.get_logger().info(f'軸の数: {self.joystick.get_numaxes()}')
             self.get_logger().info(f'ボタンの数: {self.joystick.get_numbuttons()}')
+            self.get_logger().info(f'HAT の数: {self.joystick.get_numhats()}')
         except pygame.error:
             self.get_logger().error('ジョイスティックが見つかりません')
             sys.exit(1)
@@ -44,26 +45,38 @@ class JoyTeleop(Node):
 
     def timer_callback(self):
         # イベントの処理
-        pygame.event.pump()
-        
-        # 全ての軸の値をログ出力
-        for i in range(self.joystick.get_numaxes()):
-            axis_value = self.joystick.get_axis(i)
-            if abs(axis_value) > 0.1:  # デッドゾーンを設定
-                self.get_logger().info(f'軸 {i}: {axis_value}')
+        for event in pygame.event.get():
+            if event.type == pygame.JOYBUTTONDOWN:
+                self.get_logger().info(f'ボタン {event.button} が押されました')
+            elif event.type == pygame.JOYBUTTONUP:
+                self.get_logger().info(f'ボタン {event.button} が離されました')
+            elif event.type == pygame.JOYAXISMOTION:
+                self.get_logger().info(f'軸 {event.axis} の値: {event.value}')
+            elif event.type == pygame.JOYHATMOTION:
+                self.get_logger().info(f'HAT {event.hat} の値: {event.value}')
         
         # Twistメッセージの作成
         msg = Twist()
         
-        # 左スティックの値を取得（デッドゾーン付き）
-        linear_input = -self.joystick.get_axis(1)
-        angular_input = -self.joystick.get_axis(0)
-        
-        # デッドゾーンの適用
-        if abs(linear_input) > 0.1:
-            msg.linear.x = linear_input * self.linear_speed
-        if abs(angular_input) > 0.1:
-            msg.angular.z = angular_input * self.angular_speed
+        # 全ての軸の値を確認
+        for i in range(self.joystick.get_numaxes()):
+            axis_value = self.joystick.get_axis(i)
+            if abs(axis_value) > 0.1:
+                self.get_logger().info(f'軸 {i} の現在値: {axis_value}')
+
+        # 全てのボタンの状態を確認
+        for i in range(self.joystick.get_numbuttons()):
+            if self.joystick.get_button(i):
+                self.get_logger().info(f'ボタン {i} が押されています')
+
+        # 全てのHATの状態を確認
+        for i in range(self.joystick.get_numhats()):
+            hat_value = self.joystick.get_hat(i)
+            if hat_value != (0, 0):
+                self.get_logger().info(f'HAT {i} の値: {hat_value}')
+                # HATの値を速度指令に変換
+                msg.linear.x = hat_value[1] * self.linear_speed  # 上下方向
+                msg.angular.z = -hat_value[0] * self.angular_speed  # 左右方向
         
         # 速度指令値をパブリッシュ
         self.publisher.publish(msg)
