@@ -13,7 +13,7 @@ from vint_train.models.nomad.nomad import NoMaD, DenseNetwork
 from vint_train.models.nomad.nomad_vint import NoMaD_ViNT, replace_bn_with_gn
 from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
 from vint_train.models.nomad.nomad_adapter import NoMaDAdapter
-from vint_train.data.twist_dataset_adapter import TwistDataset
+from vint_train.data.twist_dataset import TwistDataset
 from vint_train.training.train_eval_loop_adapter import train_eval_loop_nomad_adapter
 
 def main(config):
@@ -128,8 +128,8 @@ if __name__ == "__main__":
         wandb.login()
         wandb.init(
             project=config["project_name"],
-            settings=wandb.Settings(start_method="fork"),
-            entity="koyasuryu",
+            name=f"adapter_{time.strftime('%Y%m%d_%H%M%S')}",
+            config=config
         )
     
-    main(config) 
+    main(config)

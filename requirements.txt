@@ -1,0 +1,7 @@
+torch
+torchvision
+lmdb
+opencv-python
+numpy
+wandb
+hydra-core 
