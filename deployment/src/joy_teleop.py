@@ -48,6 +48,9 @@ class JoyTeleop(Node):
         
         # タイマーの設定（20Hz）
         self.create_timer(0.05, self.timer_callback)
+        
+        # 前回の軸の値を保存
+        self.prev_axes = [0.0] * self.joystick.get_numaxes()
 
     def apply_deadzone(self, value, deadzone):
         if abs(value) < deadzone:
@@ -58,6 +61,14 @@ class JoyTeleop(Node):
         # イベントの処理
         pygame.event.pump()
         
+        # 全ての軸の値をチェック
+        for i in range(self.joystick.get_numaxes()):
+            current_value = self.joystick.get_axis(i)
+            # 値が変化した場合のみ出力
+            if abs(current_value - self.prev_axes[i]) > 0.01:
+                self.get_logger().info(f'軸 {i} の値: {current_value:.3f}')
+                self.prev_axes[i] = current_value
+        
         # Twistメッセージの作成
         msg = Twist()
         
@@ -65,13 +76,9 @@ class JoyTeleop(Node):
         horizontal = self.apply_deadzone(self.joystick.get_axis(self.STICK_HORIZONTAL), self.deadzone)
         vertical = self.apply_deadzone(self.joystick.get_axis(self.STICK_VERTICAL), self.deadzone)
         
-        # デバッグ出力（値が変化している場合のみ）
-        if abs(horizontal) > self.deadzone or abs(vertical) > self.deadzone:
-            self.get_logger().info(f'スティック値: 水平={horizontal:.2f}, 垂直={vertical:.2f}')
-        
         # 速度指令値の計算
-        msg.linear.x = -vertical * self.linear_speed   # 前後移動（上が負、下が正なので反転）
-        msg.angular.z = -horizontal * self.angular_speed  # 回転（左が正、右が負なので反転）
+        msg.linear.x = -vertical * self.linear_speed
+        msg.angular.z = -horizontal * self.angular_speed
         
         # 速度指令値をパブリッシュ
         self.publisher.publish(msg)
