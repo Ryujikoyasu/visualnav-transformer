@@ -29,11 +29,14 @@ from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1
 
 
 from vint_train.data.vint_dataset import ViNT_Dataset
+from vint_train.data.twist_dataset_adapter import TwistDataset
 from vint_train.training.train_eval_loop import (
     train_eval_loop,
     train_eval_loop_nomad,
     load_model,
 )
+
+from vint_train.models.nomad.nomad_adapter import NoMaDAdapter
 from vint_train.training.train_eval_loop_adapter import train_eval_loop_nomad_adapter
 
 
@@ -80,19 +83,38 @@ def main(config):
     if "clip_goals" not in config:
         config["clip_goals"] = False
 
-    for dataset_name in config["datasets"]:
-        data_config = config["datasets"][dataset_name]
-        if "negative_mining" not in data_config:
-            data_config["negative_mining"] = True
-        if "goals_per_obs" not in data_config:
-            data_config["goals_per_obs"] = 1
-        if "end_slack" not in data_config:
-            data_config["end_slack"] = 0
-        if "waypoint_spacing" not in data_config:
-            data_config["waypoint_spacing"] = 1
+    if config["model_type"] == "nomad_adapter":
+        # Twist用のデータセットを読み込む
+        train_dataset = TwistDataset(
+            data_dir=config["datasets"]["twist_data"]["train"],
+            transform=transform
+        )
+        
+        test_dataloaders["twist_test"] = DataLoader(
+            TwistDataset(
+                data_dir=config["datasets"]["twist_data"]["test"],
+                transform=transform
+            ),
+            batch_size=config["eval_batch_size"],
+            shuffle=True,
+            num_workers=0,
+            drop_last=False,
+        )
+    else:
+        # 既存のViNT_Datasetの読み込み
+        for dataset_name in config["datasets"]:
+            data_config = config["datasets"][dataset_name]
+            if "negative_mining" not in data_config:
+                data_config["negative_mining"] = True
+            if "goals_per_obs" not in data_config:
+                data_config["goals_per_obs"] = 1
+            if "end_slack" not in data_config:
+                data_config["end_slack"] = 0
+            if "waypoint_spacing" not in data_config:
+                data_config["waypoint_spacing"] = 1
 
-        for data_split_type in ["train", "test"]:
-            if data_split_type in data_config:
+            for data_split_type in ["train", "test"]:
+                if data_split_type in data_config:
                     dataset = ViNT_Dataset(
                         data_folder=data_config["data_folder"],
                         data_split_folder=data_config[data_split_type],
@@ -219,16 +241,92 @@ def main(config):
             prediction_type='epsilon'
         )
     elif config["model_type"] == "nomad_adapter":
-        # ベースモデルのロード
-        base_model = NoMaD(...)  # 必要なパラメータを設定
-        base_model.load_state_dict(torch.load(config['load_run']))
+        # ベースとなるNoMaDモデルの作成
+        if config["vision_encoder"] == "nomad_vint":
+            vision_encoder = NoMaD_ViNT(
+                obs_encoding_size=config["encoding_size"],
+                context_size=config["context_size"],
+                mha_num_attention_heads=config["mha_num_attention_heads"],
+                mha_num_attention_layers=config["mha_num_attention_layers"],
+                mha_ff_dim_factor=config["mha_ff_dim_factor"],
+            )
+            vision_encoder = replace_bn_with_gn(vision_encoder)
         
-        metrics = train_eval_loop_nomad_adapter(
-            train_model=not args.eval,
-            base_model=base_model,
-            adapter_bottleneck_dim=config['adapter_bottleneck_dim'],
-            **config['train_params']
+        noise_pred_net = ConditionalUnet1D(
+            input_dim=2,
+            global_cond_dim=config["encoding_size"],
+            down_dims=config["down_dims"],
+            cond_predict_scale=config["cond_predict_scale"],
         )
+        
+        dist_pred_network = DenseNetwork(embedding_dim=config["encoding_size"])
+        
+        # ベースモデルの作成
+        base_model = NoMaD(
+            vision_encoder=vision_encoder,
+            noise_pred_net=noise_pred_net,
+            dist_pred_net=dist_pred_network,
+        )
+
+        # 事前学習済みの重みをロード
+        if "pretrained_path" not in config:
+            raise ValueError("pretrained_path must be specified for nomad_adapter")
+        
+        checkpoint = torch.load(config["pretrained_path"])
+        base_model.load_state_dict(checkpoint["model_state_dict"])
+        print(f"Loaded pretrained model from {config['pretrained_path']}")
+        
+        # NoMaDAdapterモデルの作成
+        model = NoMaDAdapter(
+            base_model=base_model,
+            adapter_bottleneck_dim=config["adapter"]["bottleneck_dim"]
+        )
+
+        # Diffusionスケューラの設定
+        noise_scheduler = DDPMScheduler(
+            num_train_timesteps=config["num_diffusion_iters"],
+            beta_schedule='squaredcos_cap_v2',
+            clip_sample=True,
+            prediction_type='epsilon'
+        )
+        
+        # Adapterのパラメータのみで最適化
+        optimizer = Adam(
+            model.get_adapter_parameters(),
+            lr=config["adapter"]["lr"]
+        )
+        
+        # スケジューラの設定
+        lr_scheduler = get_scheduler(
+            name="cosine",
+            optimizer=optimizer,
+            num_warmup_steps=0,
+            num_training_steps=len(train_loader) * config["num_epochs"]
+        )
+        
+        # metricsを受け取って活用
+        metrics = train_eval_loop_nomad_adapter(
+            train_model=config["train"],
+            model=model,
+            optimizer=optimizer,
+            lr_scheduler=lr_scheduler,
+            noise_scheduler=noise_scheduler,
+            train_loader=train_loader,
+            test_dataloaders=test_dataloaders,
+            transform=transform,
+            **config["train_params"]
+        )
+        
+        # 結果をログに記録
+        print(f"Training Results: {metrics}")
+        
+        if config["use_wandb"]:
+            wandb.log({
+                "final_metrics/train_loss": metrics["final_train_loss"],
+                "final_metrics/test_loss": metrics["final_test_loss"],
+                "final_metrics/best_test_loss": metrics["best_test_loss"],
+                "final_metrics/training_time": metrics["training_time"],
+            })
     else:
         raise ValueError(f"Model {config['model']} not supported")
 

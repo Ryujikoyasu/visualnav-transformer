@@ -1,15 +1,60 @@
-# nomad.yamlを継承
-defaults:
-  - nomad
+# モデル設定
+model_type: nomad_adapter
+vision_encoder: nomad_vint
 
-# Adapter固有の設定を追加
+# 事前学習済みモデルのパス
+pretrained_path: "/ssd/source/navigation/visualnav-transformer/deployment/model_weights/nomad.pth"  # ここに事前学習済みモデルのパスを指定
+
+# エンコーダ設定
+encoding_size: 512
+context_size: 1
+mha_num_attention_heads: 8
+mha_num_attention_layers: 4
+mha_ff_dim_factor: 4
+
+# Diffusionモデル設定
+down_dims: [512, 512, 512, 512]
+cond_predict_scale: True
+num_diffusion_iters: 100
+
+# Adapter固有の設定
 adapter:
   bottleneck_dim: 64
   lr: 1e-4
 
-# 学習率は通常より小さめに設定
+# 学習設定
+train: True
+batch_size: 8
+num_workers: 4
+optimizer: adam
 lr: 1e-4
+num_epochs: 50  # Adapterは少ないパラメータなので調整
+eval_freq: 5
+print_log_freq: 100
+image_log_freq: 1000
+num_images_log: 4
+eval_fraction: 0.25
 
-# プロジェクト名を変更
+# データセット設定
+datasets:
+  twist_data:
+    data_folder: /ssd/source/navigation/asset/nomad_adapter_dataset/raw_data
+    train: /ssd/source/navigation/asset/nomad_adapter_dataset/processed_data/train
+    test: /ssd/source/navigation/asset/nomad_adapter_dataset/processed_data/test
+    goals_per_obs: 1
+    negative_mining: False
+
+# プロジェクト設定
 project_name: nomad_adapter
-run_name: nomad_adapter 
+run_name: nomad_adapter_test
+use_wandb: True
+
+# その他の設定
+normalize: True
+goal_type: "image"
+
+# 学習率スケジューラの設定
+scheduler:
+  name: "cosine"
+  num_warmup_steps: 0
+  num_cycles: 1
