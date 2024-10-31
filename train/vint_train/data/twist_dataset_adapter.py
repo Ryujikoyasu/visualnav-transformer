@@ -3,84 +3,71 @@ from torch.utils.data import Dataset
 import os
 import cv2
 import numpy as np
-import pickle
 from typing import Tuple, List
 
-# デフォルトのディレクトリパスを設定
-DEFAULT_DATA_ROOT = "/ssd/source/navigation/asset/nomad_adapter_dataset"
-DEFAULT_RAW_DIR = os.path.join(DEFAULT_DATA_ROOT, 'raw_data_4.0hz')
-DEFAULT_PROCESSED_DIR = os.path.join(DEFAULT_DATA_ROOT, 'processed_data')
-
 class TwistDataset(Dataset):
-    def __init__(self, data_dir: str = DEFAULT_PROCESSED_DIR, transform=None):
-        """
-        Args:
-            data_dir (str): データセットのルートディレクトリ
-            transform: 画像の前処理
-        """
+    def __init__(self, data_dir: str, transform=None):
         self.data_dir = data_dir
         self.transform = transform
         
-        # トラジェクトリのリストを取得
-        self.trajectories = []
-        for traj_dir in os.listdir(data_dir):
-            if os.path.isdir(os.path.join(data_dir, traj_dir)):
-                self.trajectories.append(traj_dir)
+        # タイムスタンプでソートされたファイルリストを作成
+        self.timestamps = []
+        twist_data_list = []
         
-        # Twistの統計情報を計算
-        all_twists = []
-        for traj in self.trajectories:
-            traj_path = os.path.join(data_dir, traj)
-            with open(os.path.join(traj_path, 'traj_data.pkl'), 'rb') as f:
-                traj_data = pickle.load(f)
-                all_twists.extend(traj_data['twists'])
-        
-        # 正規化のための統計量を計算
-        all_twists = np.array(all_twists)
-        self.twist_mean = np.mean(all_twists, axis=0)
-        self.twist_std = np.std(all_twists, axis=0)
-        self.twist_std[self.twist_std == 0] = 1.0  # ゼロ除算を防ぐ
-        
-        # データの読み込みと正規化
-        self.data = []
-        for traj in self.trajectories:
-            traj_path = os.path.join(data_dir, traj)
-            with open(os.path.join(traj_path, 'traj_data.pkl'), 'rb') as f:
-                traj_data = pickle.load(f)
-            
-            for i in range(len(traj_data['twists'])):
-                # Twistデータを正規化
-                normalized_twist = (traj_data['twists'][i] - self.twist_mean) / self.twist_std
+        # データの読み込みと統計量の計算
+        for file in os.listdir(data_dir):
+            if file.endswith('_image.jpg'):
+                timestamp = int(file.split('_')[0])
+                twist_path = os.path.join(data_dir, f'{timestamp}_twist.txt')
                 
-                self.data.append({
-                    'image_path': os.path.join(traj_path, f'{i}.jpg'),
-                    'twist': normalized_twist,
-                    'twist_raw': traj_data['twists'][i]  # 生のTwistデータも保持
-                })
+                if os.path.exists(twist_path):
+                    with open(twist_path, 'r') as f:
+                        twist_data = [float(x) for x in f.read().split(',')]
+                        twist_data_list.append(twist_data)
+                        self.timestamps.append(timestamp)
+        
+        if not self.timestamps:
+            raise ValueError(f"No valid data found in {data_dir}")
+            
+        # 統計量の計算
+        twist_data_array = np.array(twist_data_list)
+        self.twist_mean = np.mean(twist_data_array, axis=0)
+        self.twist_std = np.std(twist_data_array, axis=0)
+        
+        # ゼロ除算を防ぐ
+        self.twist_std = np.where(self.twist_std == 0, 1.0, self.twist_std)
+        
+        self.timestamps.sort()
+        
+    def __len__(self) -> int:
+        return len(self.timestamps)
     
-    def __getitem__(self, idx: int) -> dict:
-        item = self.data[idx]
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        timestamp = self.timestamps[idx]
         
         # 画像の読み込み
-        image = cv2.imread(item['image_path'])
+        img_path = os.path.join(self.data_dir, f'{timestamp}_image.jpg')
+        image = cv2.imread(img_path)
+        if image is None:
+            raise ValueError(f"Failed to load image: {img_path}")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
+        # Twistデータの読み込み
+        twist_path = os.path.join(self.data_dir, f'{timestamp}_twist.txt')
+        with open(twist_path, 'r') as f:
+            twist_data = np.array([float(x) for x in f.read().split(',')])
+        
+        # 標準化
+        twist_data = (twist_data - self.twist_mean) / self.twist_std
+        
+        # 必要に応じて画像の前処理
         if self.transform:
             image = self.transform(image)
         
         return {
             'image': image,
-            'twist': torch.tensor(item['twist'], dtype=torch.float32),
-            'twist_raw': torch.tensor(item['twist_raw'], dtype=torch.float32)
+            'twist': torch.tensor(twist_data, dtype=torch.float32)
         }
-    
-    def denormalize_twist(self, normalized_twist: np.ndarray) -> np.ndarray:
-        """正規化されたTwistを元のスケールに戻す"""
-        return normalized_twist * self.twist_std + self.twist_mean
-
-    def get_normalization_stats(self) -> Tuple[np.ndarray, np.ndarray]:
-        """正規化の統計量を取得"""
-        return self.twist_mean, self.twist_std
 
 def format_twist_dataset(source_dir: str = DEFAULT_RAW_DIR, 
                         target_dir: str = DEFAULT_PROCESSED_DIR,
