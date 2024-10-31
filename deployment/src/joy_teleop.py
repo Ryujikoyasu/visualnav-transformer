@@ -85,8 +85,8 @@ class JoyTeleop(Node):
             angular_speed = 0.0
         
         # 速度指令値の設定
-        msg.linear.x = y * self.linear_speed
-        msg.angular.z = -x * angular_speed
+        msg.linear.x = x * self.linear_speed
+        msg.angular.z = -y * angular_speed
         
         # 速度指令値をパブリッシュ
         self.publisher.publish(msg)
