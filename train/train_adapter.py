@@ -139,12 +139,12 @@ if __name__ == "__main__":
         config = yaml.safe_load(f)
     
     # WandBの設定
-    if config["use_wandb"]:
-        wandb.login()
-        wandb.init(
-            project=config["project_name"],
-            name=f"adapter_{time.strftime('%Y%m%d_%H%M%S')}",
-            config=config
-        )
+    # if config["use_wandb"]:
+    #     wandb.login()
+    #     wandb.init(
+    #         project=config["project_name"],
+    #         name=f"adapter_{time.strftime('%Y%m%d_%H%M%S')}",
+    #         config=config
+    #     )
     
     main(config)
