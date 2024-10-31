@@ -40,20 +40,28 @@ class JoyTeleop(Node):
             sys.exit(1)
             
         # 制御パラメータ
-        self.linear_speed = 0.5  # 直進速度の最大値
-        self.angular_speed = 1.0  # 回転速度の最大値
+        self.scale_linear = 0.6  # 通常の直進速度
+        self.scale_linear_turbo = 0.6  # ターボ時の直進速度
+        self.scale_angular = -0.2  # 通常の回転速度
+        self.scale_angular_turbo = -0.6  # ターボ時の回転速度
+        
+        # ボタン設定
+        self.enable_button = 15  # L2 shoulder button
+        self.enable_turbo_button = 14  # L1 shoulder button
         
         # 状態管理
         self.current_hat = (0, 0)  # 現在のHAT値
         self.target_vel = [0.0, 0.0]  # 目標速度 [linear.x, angular.z]
         self.current_vel = [0.0, 0.0]  # 現在の速度
+        self.enabled = False  # L2が押されているか
+        self.turbo = False  # L1が押されているか
         
         # 補間パラメータ
-        self.interpolation_rate = 5.0  # 補間速度（値が大きいほど素早く変化）
+        self.interpolation_rate = 5.0
         self.last_time = time()
         
-        # タイマーの設定（60Hz）
-        self.create_timer(1.0/60.0, self.timer_callback)
+        # タイマーの設定（10Hz）
+        self.create_timer(0.1, self.timer_callback)
         
         self.get_logger().info("初期化完了")
 
@@ -73,14 +81,41 @@ class JoyTeleop(Node):
         for event in pygame.event.get():
             if event.type == pygame.JOYHATMOTION:
                 self.current_hat = event.value
-                # HAT値から目標速度を設定
-                x, y = self.current_hat
-                # 斜め入力の場合は正規化
-                if x != 0 and y != 0:
-                    norm = math.sqrt(2)
-                    self.target_vel = [y/norm * self.linear_speed, -x/norm * self.angular_speed]
-                else:
-                    self.target_vel = [y * self.linear_speed, -x * self.angular_speed]
+            elif event.type == pygame.JOYBUTTONDOWN:
+                if event.button == self.enable_button:
+                    self.enabled = True
+                elif event.button == self.enable_turbo_button:
+                    self.turbo = True
+            elif event.type == pygame.JOYBUTTONUP:
+                if event.button == self.enable_button:
+                    self.enabled = False
+                elif event.button == self.enable_turbo_button:
+                    self.turbo = False
+        
+        # 速度スケールの決定
+        if not self.enabled:
+            # L2が押されていない場合は停止
+            self.target_vel = [0.0, 0.0]
+        else:
+            # HAT値から目標速度を設定
+            x, y = self.current_hat
+            
+            # 速度スケールの選択
+            linear_scale = self.scale_linear_turbo if self.turbo else self.scale_linear
+            angular_scale = self.scale_angular_turbo if self.turbo else self.scale_angular
+            
+            # 斜め入力の場合は正規化
+            if x != 0 and y != 0:
+                norm = math.sqrt(2)
+                self.target_vel = [
+                    y/norm * linear_scale,
+                    -x/norm * angular_scale
+                ]
+            else:
+                self.target_vel = [
+                    y * linear_scale,
+                    -x * angular_scale
+                ]
         
         # 速度の補間
         self.current_vel[0] = self.interpolate_velocity(
@@ -97,8 +132,7 @@ class JoyTeleop(Node):
         # 実際の値をログ出力（値が0でない場合のみ）
         if abs(msg.linear.x) > 0.01 or abs(msg.angular.z) > 0.01:
             self.get_logger().info(
-                f'HAT: {self.current_hat}, '
-                f'Target: ({self.target_vel[0]:.2f}, {self.target_vel[1]:.2f}), '
+                f'HAT: {self.current_hat}, Enabled: {self.enabled}, Turbo: {self.turbo}, '
                 f'Current: ({self.current_vel[0]:.2f}, {self.current_vel[1]:.2f})'
             )
 
