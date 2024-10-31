@@ -1,0 +1,5 @@
+datasets:
+  twist_data:
+    data_folder: /path/to/your/raw_data
+    train: /path/to/processed_data/train
+    test: /path/to/processed_data/test 

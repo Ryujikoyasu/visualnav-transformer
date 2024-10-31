@@ -3,7 +3,12 @@ from torch.utils.data import Dataset
 import os
 import cv2
 import numpy as np
+import pickle
 from typing import Tuple, List
+
+# デフォルトのディレクトリパスを設定
+DEFAULT_RAW_DIR = os.path.expanduser('/ssd/source/navigation/asset/nomad_adapter_dataset/raw_data_4.0hz')
+DEFAULT_PROCESSED_DIR = os.path.expanduser('/ssd/source/navigation/asset/nomad_adapter_dataset/processed_data')
 
 class TwistDataset(Dataset):
     def __init__(self, data_dir: str, transform=None):
