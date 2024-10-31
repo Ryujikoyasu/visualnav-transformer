@@ -3,8 +3,9 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-import pygame
+from evdev import InputDevice, categorize, ecodes, list_devices
 import sys
+import math
 
 class JoyTeleop(Node):
     def __init__(self):
@@ -17,51 +18,62 @@ class JoyTeleop(Node):
             10
         )
         
-        # Pygameの初期化
-        pygame.init()
-        pygame.joystick.init()
+        # Joy-Con (L)を探す
+        self.device = None
+        for path in list_devices():
+            device = InputDevice(path)
+            if "Joy-Con" in device.name:
+                self.device = device
+                self.get_logger().info(f'Joy-Con が見つかりました: {device.name}')
+                break
         
-        # ジョイスティックの接続確認
-        try:
-            self.joystick = pygame.joystick.Joystick(0)
-            self.joystick.init()
-            self.get_logger().info('ジョイスティックが接続されました')
-            
-            # ジョイスティックの情報を表示
-            self.get_logger().info(f'ジョイスティック名: {self.joystick.get_name()}')
-            self.get_logger().info(f'軸の数: {self.joystick.get_numaxes()}')
-            self.get_logger().info(f'ボタンの数: {self.joystick.get_numbuttons()}')
-            self.get_logger().info(f'HAT の数: {self.joystick.get_numhats()}')
-        except pygame.error:
-            self.get_logger().error('ジョイスティックが見つかりません')
+        if self.device is None:
+            self.get_logger().error('Joy-Con が見つかりません')
             sys.exit(1)
             
         # 制御パラメータ
         self.linear_speed = 0.5  # 直進速度の最大値
         self.angular_speed = 1.0  # 回転速度の最大値
         
-        # 現在のHAT値を保存
-        self.current_hat = (0, 0)
+        # スティックの状態
+        self.stick_x = 0
+        self.stick_y = 0
+        
+        # デッドゾーン
+        self.deadzone = 500
         
         # タイマーの設定（20Hz）
         self.create_timer(0.05, self.timer_callback)
 
+    def normalize_stick(self, value):
+        # スティックの値を-1から1の範囲に正規化
+        MAX_VALUE = 2048
+        normalized = value / MAX_VALUE
+        
+        # デッドゾーンの適用
+        if abs(normalized) < self.deadzone / MAX_VALUE:
+            return 0.0
+        return normalized
+
     def timer_callback(self):
-        # イベントの処理
-        for event in pygame.event.get():
-            if event.type == pygame.JOYHATMOTION:
-                self.current_hat = event.value
-                self.get_logger().info(f'HAT値: {event.value}')
+        try:
+            # イベントの処理
+            events = self.device.read()
+            for event in events:
+                if event.type == ecodes.EV_ABS:
+                    if event.code == ecodes.ABS_X:  # 左スティック X軸
+                        self.stick_x = event.value - 2048  # 中心を0に
+                    elif event.code == ecodes.ABS_Y:  # 左スティック Y軸
+                        self.stick_y = event.value - 2048  # 中心を0に
+        except BlockingIOError:
+            pass  # イベントがない場合は無視
         
         # Twistメッセージの作成
         msg = Twist()
         
-        # HATの値を速度指令に変換
-        # current_hat は (x, y) のタプルで、
-        # x: -1（左）、0（中立）、1（右）
-        # y: -1（下）、0（中立）、1（上）
-        msg.linear.x = float(self.current_hat[1]) * self.linear_speed
-        msg.angular.z = -float(self.current_hat[0]) * self.angular_speed
+        # スティックの値を速度指令に変換
+        msg.linear.x = -self.normalize_stick(self.stick_y) * self.linear_speed
+        msg.angular.z = -self.normalize_stick(self.stick_x) * self.angular_speed
         
         # 速度指令値をパブリッシュ
         self.publisher.publish(msg)
@@ -81,7 +93,6 @@ def main():
     finally:
         node.destroy_node()
         rclpy.shutdown()
-        pygame.quit()
 
 if __name__ == '__main__':
     main()
