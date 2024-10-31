@@ -6,8 +6,6 @@ from geometry_msgs.msg import Twist
 import pygame
 import sys
 import os
-import math
-from time import time
 
 class JoyTeleop(Node):
     def __init__(self):
@@ -40,100 +38,64 @@ class JoyTeleop(Node):
             sys.exit(1)
             
         # 制御パラメータ
-        self.scale_linear = 0.6  # 通常の直進速度
-        self.scale_linear_turbo = 0.6  # ターボ時の直進速度
-        self.scale_angular = -0.2  # 通常の回転速度
-        self.scale_angular_turbo = -0.6  # ターボ時の回転速度
+        self.linear_speed = 0.6  # 直進速度（固定）
+        self.angular_speed_slow = -0.2  # L1押下時の回転速度
+        self.angular_speed_fast = -0.6  # L2押下時の回転速度
         
         # ボタン設定
-        self.enable_button = 15  # L2 shoulder button
-        self.enable_turbo_button = 14  # L1 shoulder button
+        self.slow_button = 14  # L1 button (低速回転)
+        self.fast_button = 15  # L2 button (高速回転)
         
         # 状態管理
-        self.current_hat = (0, 0)  # 現在のHAT値
-        self.target_vel = [0.0, 0.0]  # 目標速度 [linear.x, angular.z]
-        self.current_vel = [0.0, 0.0]  # 現在の速度
-        self.enabled = False  # L2が押されているか
-        self.turbo = False  # L1が押されているか
-        
-        # 補間パラメータ
-        self.interpolation_rate = 5.0
-        self.last_time = time()
+        self.current_hat = (0, 0)
+        self.slow_enabled = False  # L1が押されているか
+        self.fast_enabled = False  # L2が押されているか
         
         # タイマーの設定（10Hz）
         self.create_timer(0.1, self.timer_callback)
         
         self.get_logger().info("初期化完了")
 
-    def interpolate_velocity(self, current, target, dt):
-        """現在の速度から目標速度に向けて滑らかに補間"""
-        diff = target - current
-        step = self.interpolation_rate * diff * dt
-        return current + step
-
     def timer_callback(self):
-        # 時間差分の計算
-        current_time = time()
-        dt = current_time - self.last_time
-        self.last_time = current_time
-        
         # イベントの処理
         for event in pygame.event.get():
             if event.type == pygame.JOYHATMOTION:
                 self.current_hat = event.value
             elif event.type == pygame.JOYBUTTONDOWN:
-                if event.button == self.enable_button:
-                    self.enabled = True
-                elif event.button == self.enable_turbo_button:
-                    self.turbo = True
+                if event.button == self.slow_button:
+                    self.slow_enabled = True
+                elif event.button == self.fast_button:
+                    self.fast_enabled = True
             elif event.type == pygame.JOYBUTTONUP:
-                if event.button == self.enable_button:
-                    self.enabled = False
-                elif event.button == self.enable_turbo_button:
-                    self.turbo = False
+                if event.button == self.slow_button:
+                    self.slow_enabled = False
+                elif event.button == self.fast_button:
+                    self.fast_enabled = False
         
-        # 速度スケールの決定
-        if not self.enabled:
-            # L2が押されていない場合は停止
-            self.target_vel = [0.0, 0.0]
-        else:
-            # HAT値から目標速度を設定
-            x, y = self.current_hat
-            
-            # 速度スケールの選択
-            linear_scale = self.scale_linear_turbo if self.turbo else self.scale_linear
-            angular_scale = self.scale_angular_turbo if self.turbo else self.scale_angular
-            
-            # 斜め入力の場合は正規化
-            if x != 0 and y != 0:
-                norm = math.sqrt(2)
-                self.target_vel = [
-                    y/norm * linear_scale,
-                    -x/norm * angular_scale
-                ]
-            else:
-                self.target_vel = [
-                    y * linear_scale,
-                    -x * angular_scale
-                ]
-        
-        # 速度の補間
-        self.current_vel[0] = self.interpolate_velocity(
-            self.current_vel[0], self.target_vel[0], dt)
-        self.current_vel[1] = self.interpolate_velocity(
-            self.current_vel[1], self.target_vel[1], dt)
-        
-        # Twistメッセージの作成と送信
+        # Twistメッセージの作成
         msg = Twist()
-        msg.linear.x = self.current_vel[0]
-        msg.angular.z = self.current_vel[1]
+        x, y = self.current_hat
+        
+        # ボタンの状態に応じて角速度を設定
+        if self.slow_enabled:
+            angular_speed = self.angular_speed_slow
+        elif self.fast_enabled:
+            angular_speed = self.angular_speed_fast
+        else:
+            angular_speed = 0.0
+        
+        # 速度指令値の設定
+        msg.linear.x = y * self.linear_speed
+        msg.angular.z = -x * angular_speed
+        
+        # 速度指令値をパブリッシュ
         self.publisher.publish(msg)
         
         # 実際の値をログ出力（値が0でない場合のみ）
         if abs(msg.linear.x) > 0.01 or abs(msg.angular.z) > 0.01:
             self.get_logger().info(
-                f'HAT: {self.current_hat}, Enabled: {self.enabled}, Turbo: {self.turbo}, '
-                f'Current: ({self.current_vel[0]:.2f}, {self.current_vel[1]:.2f})'
+                f'HAT: {self.current_hat}, L1: {self.slow_enabled}, L2: {self.fast_enabled}, '
+                f'Vel: ({msg.linear.x:.2f}, {msg.angular.z:.2f})'
             )
 
 def main():
