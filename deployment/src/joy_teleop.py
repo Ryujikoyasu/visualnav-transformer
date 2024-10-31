@@ -43,8 +43,8 @@ class JoyTeleop(Node):
         self.angular_speed_fast = -0.6  # L2押下時の回転速度
         
         # ボタン設定
-        self.slow_button = 14  # L1 button (低速回転)
-        self.fast_button = 15  # L2 button (高速回転)
+        self.slow_button = 15  # L1 button (低速回転)
+        self.fast_button = 14  # L2 button (高速回転)
         
         # 状態管理
         self.current_hat = (0, 0)
@@ -85,8 +85,8 @@ class JoyTeleop(Node):
             angular_speed = 0.0
         
         # 速度指令値の設定
-        msg.linear.x = x * self.linear_speed
-        msg.angular.z = -y * angular_speed
+        msg.linear.x = -x * self.linear_speed
+        msg.angular.z = y * angular_speed
         
         # 速度指令値をパブリッシュ
         self.publisher.publish(msg)
