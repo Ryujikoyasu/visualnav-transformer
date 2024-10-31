@@ -10,7 +10,6 @@ from torchvision import transforms
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from omegaconf import OmegaConf
 
-
 from vint_train.models.nomad.nomad import NoMaD, DenseNetwork
 from vint_train.models.nomad.nomad_vint import NoMaD_ViNT, replace_bn_with_gn
 from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
@@ -137,7 +136,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # OmegaConfを使用して設定を読み込む
-    config = OmegaConf.load(args.config)
+    base_config = OmegaConf.load("config/nomad.yaml")
+    adapter_config = OmegaConf.load(args.config)
+    
+    # 設定をマージ
+    config = OmegaConf.merge(base_config, adapter_config)
     
     # 必要に応じてdictに変換
     config = OmegaConf.to_container(config, resolve=True)
