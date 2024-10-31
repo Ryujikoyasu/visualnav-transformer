@@ -1,3 +1,6 @@
+defaults:
+  - nomad
+
 # モデル設定
 model_type: nomad_adapter
 vision_encoder: nomad_vint
@@ -35,7 +38,7 @@ datasets:
 # プロジェクト設定
 project_name: nomad_adapter
 run_name: nomad_adapter_test
-use_wandb: True
+use_wandb: False
 
 # その他の設定
 normalize: True
