@@ -6,6 +6,7 @@ from geometry_msgs.msg import Twist
 from evdev import InputDevice, categorize, ecodes, list_devices
 import sys
 import math
+import os
 
 class JoyTeleop(Node):
     def __init__(self):
@@ -18,18 +19,42 @@ class JoyTeleop(Node):
             10
         )
         
+        # 利用可能なデバイスをすべて表示
+        self.get_logger().info("利用可能なデバイス:")
+        for path in list_devices():
+            try:
+                device = InputDevice(path)
+                self.get_logger().info(f"  {path}: {device.name}")
+            except Exception as e:
+                self.get_logger().error(f"デバイス {path} のオープンに失敗: {e}")
+        
         # Joy-Con (L)を探す
         self.device = None
         for path in list_devices():
-            device = InputDevice(path)
-            if "Joy-Con" in device.name:
-                self.device = device
-                self.get_logger().info(f'Joy-Con が見つかりました: {device.name}')
-                break
+            try:
+                device = InputDevice(path)
+                if "Joy-Con" in device.name:
+                    self.device = device
+                    self.get_logger().info(f'Joy-Con が見つかりました: {device.name} at {path}')
+                    # デバイスの機能を表示
+                    caps = device.capabilities(verbose=True)
+                    self.get_logger().info("デバイスの機能:")
+                    for key, value in caps.items():
+                        self.get_logger().info(f"  {key}: {value}")
+                    break
+            except Exception as e:
+                self.get_logger().error(f"デバイス {path} のオープンに失敗: {e}")
         
         if self.device is None:
             self.get_logger().error('Joy-Con が見つかりません')
             sys.exit(1)
+            
+        # デバイスのパーミッションをチェック
+        device_path = self.device.path
+        stat_info = os.stat(device_path)
+        self.get_logger().info(f"デバイスのパーミッション: {oct(stat_info.st_mode)}")
+        self.get_logger().info(f"デバイスの所有者: {stat_info.st_uid}")
+        self.get_logger().info(f"現在のユーザーID: {os.getuid()}")
             
         # 制御パラメータ
         self.linear_speed = 0.5  # 直進速度の最大値
@@ -44,6 +69,8 @@ class JoyTeleop(Node):
         
         # タイマーの設定（20Hz）
         self.create_timer(0.05, self.timer_callback)
+        
+        self.get_logger().info("初期化完了")
 
     def normalize_stick(self, value):
         # スティックの値を-1から1の範囲に正規化
@@ -60,13 +87,18 @@ class JoyTeleop(Node):
             # イベントの処理
             events = self.device.read()
             for event in events:
+                self.get_logger().info(f'イベント検出: type={event.type}, code={event.code}, value={event.value}')
                 if event.type == ecodes.EV_ABS:
                     if event.code == ecodes.ABS_X:  # 左スティック X軸
                         self.stick_x = event.value - 2048  # 中心を0に
+                        self.get_logger().info(f'スティックX: {self.stick_x}')
                     elif event.code == ecodes.ABS_Y:  # 左スティック Y軸
                         self.stick_y = event.value - 2048  # 中心を0に
+                        self.get_logger().info(f'スティックY: {self.stick_y}')
         except BlockingIOError:
             pass  # イベントがない場合は無視
+        except Exception as e:
+            self.get_logger().error(f'イベント読み取りエラー: {e}')
         
         # Twistメッセージの作成
         msg = Twist()
