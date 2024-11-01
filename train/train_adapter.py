@@ -142,7 +142,6 @@ def main(config):
         "image_log_freq": config["image_log_freq"],
         "num_images_log": config["num_images_log"],
         "eval_fraction": config["eval_fraction"],
-        "num_diffusion_iters": config["num_diffusion_iters"],
         "goal_mask_prob": config["goal_mask_prob"]
     }
     
@@ -155,7 +154,7 @@ def main(config):
         test_dataloaders={"test": test_loader},
         transform=transform,
         device=device,
-        **train_config  # 修正したconfigを渡す
+        **train_config
     )
     
     print(f"Training completed. Final metrics: {metrics}")
