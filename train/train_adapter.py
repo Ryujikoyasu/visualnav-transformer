@@ -135,21 +135,36 @@ if __name__ == "__main__":
     parser.add_argument("--config", "-c", default="config/nomad_adapter.yaml")
     args = parser.parse_args()
     
-    # OmegaConfを使用して設定を読み込む
+    # まずbase_configを読み込む
     base_config = OmegaConf.load("config/nomad.yaml")
+    
+    # adapter_configを読み込む
     adapter_config = OmegaConf.load(args.config)
     
-    # 設定をマージ
+    # マージする際に、adapter_configを優先させる
     config = OmegaConf.merge(base_config, adapter_config)
     
-    # 必要に応じてdictに変換
-    config = OmegaConf.to_container(config, resolve=True)
-    # マージ後の設定を詳細に出力
-    print("Merged Config:")
+    # 設定の整合性チェックと調整
+    if "defaults" in config:
+        del config["defaults"]  # defaultsキーを削除（既にマージ済みのため）
+    
+    # バッチサイズなどの重要なパラメータが正しく上書きされていることを確認
+    print("\nKey Configuration Values:")
+    important_keys = [
+        "batch_size", "num_workers", "lr", "optimizer", 
+        "num_epochs", "eval_freq", "model_type"
+    ]
+    for key in important_keys:
+        print(f"{key}: {config.get(key)}")
+    
+    print("\nFull Merged Config:")
     for key, value in config.items():
         print(f"{key}: {value}")
-
-    # WandBの設定
+    
+    # dictに変換
+    config = OmegaConf.to_container(config, resolve=True)
+    
+    # WandBの設定（コメントアウトされたまま）
     # if config["use_wandb"]:
     #     wandb.login()
     #     wandb.init(
