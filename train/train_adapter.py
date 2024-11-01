@@ -33,7 +33,9 @@ def main(config):
     # データローダーの作成
     train_dataset = TwistDataset(
         data_dir=config["datasets"]["twist_data"]["train"],
-        transform=transform
+        transform=transform,
+        context_size=config["context_size"],  # 設定ファイルから取得
+        len_traj_pred=config["len_traj_pred"]  # 設定ファイルから取得
     )
     
     train_loader = DataLoader(
@@ -55,6 +57,24 @@ def main(config):
         shuffle=False,
         num_workers=0,
     )
+    
+    # データローダーの作成後に追加
+    print("\n=== DataLoader Debug Info ===")
+    print(f"Train dataset size: {len(train_dataset)}")
+    print(f"Test dataset size: {len(test_dataset)}")
+    
+    # 最初のバッチを取得してみる
+    try:
+        sample_batch = next(iter(train_loader))
+        print("\nSuccessfully loaded first batch:")
+        print(f"Batch keys: {sample_batch.keys()}")
+        for k, v in sample_batch.items():
+            print(f"{k} shape: {v.shape}")
+    except Exception as e:
+        print("\nError loading first batch:")
+        print(f"Error type: {type(e)}")
+        print(f"Error message: {str(e)}")
+    print("========================\n")
     
     # ベースモデルの作成
     vision_encoder = NoMaD_ViNT(
@@ -186,17 +206,17 @@ if __name__ == "__main__":
         del config["defaults"]  # defaultsキーを削除（既にマージ済みのため）
     
     # バッチサイズなどの重要なパラメータが正しく上書きされていることを確認
-    print("\nKey Configuration Values:")
-    important_keys = [
-        "batch_size", "num_workers", "lr", "optimizer", 
-        "num_epochs", "eval_freq", "model_type"
-    ]
-    for key in important_keys:
-        print(f"{key}: {config.get(key)}")
+    # print("\nKey Configuration Values:")
+    # important_keys = [
+    #     "batch_size", "num_workers", "lr", "optimizer", 
+    #     "num_epochs", "eval_freq", "model_type"
+    # ]
+    # for key in important_keys:
+    #     print(f"{key}: {config.get(key)}")
     
-    print("\nFull Merged Config:")
-    for key, value in config.items():
-        print(f"{key}: {value}")
+    # print("\nFull Merged Config:")
+    # for key, value in config.items():
+    #     print(f"{key}: {value}")
     
     # dictに変換
     config = OmegaConf.to_container(config, resolve=True)

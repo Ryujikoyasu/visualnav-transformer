@@ -7,11 +7,13 @@ import pickle
 from typing import Tuple, Dict
 
 class TwistDataset(Dataset):
-    def __init__(self, data_dir: str, transform=None):
+    def __init__(self, data_dir: str, transform=None, context_size: int = 5, len_traj_pred: int = 8):
         """
         Args:
             data_dir: processed_data/train または processed_data/test へのパス
             transform: 画像の前処理
+            context_size: コンテキストサイズ
+            len_traj_pred: 軌道予測の長さ
         """
         self.data_dir = data_dir
         self.transform = transform
@@ -35,12 +37,42 @@ class TwistDataset(Dataset):
         self.twist_std = np.std(twist_data, axis=0)
         self.twist_std = np.where(self.twist_std == 0, 1.0, self.twist_std)
         
+        # デバッグ用の情報出力
+        print(f"=== Dataset Debug Info ===")
+        print(f"Data directory: {data_dir}")
+        print(f"Number of image files: {self.num_frames}")
+        print(f"Number of twist data: {len(self.traj_data['twists'])}")
+        print(f"Context size: {context_size}")
+        print(f"Trajectory prediction length: {len_traj_pred}")
+        
+        # valid_indicesの計算過程を表示
+        self.valid_indices = []
+        for i in range(self.num_frames - (self.context_size + self.len_traj_pred) + 1):
+            if i + self.context_size + self.len_traj_pred <= len(self.traj_data['twists']):
+                self.valid_indices.append(i)
+                
+        print(f"Number of valid indices: {len(self.valid_indices)}")
+        if len(self.valid_indices) > 0:
+            print(f"First few valid indices: {self.valid_indices[:5]}")
+        print("========================")
+    
     def __len__(self) -> int:
         return self.num_frames
     
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
+        # デバッグ用の情報出力
+        print(f"\n=== GetItem Debug Info ===")
+        print(f"Requested index: {idx}")
+        print(f"Valid indices length: {len(self.valid_indices)}")
+        
+        start_idx = self.valid_indices[idx]
+        print(f"Start index: {start_idx}")
+        print(f"Context range: {start_idx} to {start_idx + self.context_size - 1}")
+        print(f"Twist range: {start_idx + self.context_size} to {start_idx + self.context_size + self.len_traj_pred - 1}")
+        print("========================\n")
+        
         # 画像の読み込み
-        img_path = os.path.join(self.data_dir, 'trajectory_001', f'{idx}.jpg')
+        img_path = os.path.join(self.data_dir, 'trajectory_001', f'{start_idx}.jpg')
         image = cv2.imread(img_path)
         if image is None:
             raise ValueError(f"Failed to load image: {img_path}")
@@ -51,7 +83,7 @@ class TwistDataset(Dataset):
             image = self.transform(image)
         
         # Twistデータの取得と正規化
-        twist_data = np.array(self.traj_data['twists'][idx])
+        twist_data = np.array(self.traj_data['twists'][start_idx])
         twist_data = (twist_data - self.twist_mean) / self.twist_std
         
         # ViNT_Datasetと同じ形式で返す
