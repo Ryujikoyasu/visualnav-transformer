@@ -25,8 +25,14 @@ class NoMaDAdapter(nn.Module):
         batch_size = obs_img.size(0)
         device = obs_img.device
         
-        # ダミーの目標画像を作成（最後の観測画像を使用）
-        goal_img = obs_img[:, -3:, :, :]  # 最後の3チャンネルを使用
+        # 観測画像を3チャンネルずつ分割
+        obs_img_split = torch.split(obs_img, 3, dim=1)
+        
+        # 最後の観測画像を目標画像として使用
+        goal_img = obs_img_split[-1]  # 最後の3チャンネル
+        
+        # 観測画像と目標画像を結合して6チャンネルにする
+        obsgoal_img = torch.cat([obs_img_split[-1], goal_img], dim=1)  # (B, 6, H, W)
         
         # 目標マスクを作成（常にマスク）
         goal_mask = torch.ones(batch_size, 1, device=device)
@@ -35,8 +41,8 @@ class NoMaDAdapter(nn.Module):
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
             obs_img=obs_img,
-            goal_img=goal_img,  # ダミーの目標画像
-            input_goal_mask=goal_mask  # 目標マスク
+            goal_img=obsgoal_img,  # 6チャンネルの画像を渡す
+            input_goal_mask=goal_mask
         )
         
         # Adapterを通す
