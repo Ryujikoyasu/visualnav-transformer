@@ -2,7 +2,7 @@ import os
 import glob
 import numpy as np
 import pickle
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 def process_dataset(data_dir: str, output_dir: str) -> str:
     """
@@ -71,7 +71,44 @@ def process_dataset(data_dir: str, output_dir: str) -> str:
     
     return target_dir
 
+def process_all_trajectories(raw_data_dir: str, output_dir: str) -> List[str]:
+    """
+    raw_dataディレクトリ内の全てのトラジェクトリデータを処理する
+    
+    Args:
+        raw_data_dir: 生データのルートディレクトリ
+        output_dir: 処理済みデータの出力先ディレクトリ
+    
+    Returns:
+        List[str]: 処理されたデータセットのディレクトリパスのリスト
+    """
+    # traj_で始まるディレクトリを全て取得
+    traj_dirs = sorted(glob.glob(os.path.join(raw_data_dir, 'traj_*')))
+    
+    if not traj_dirs:
+        raise ValueError(f"No trajectory directories found in {raw_data_dir}")
+    
+    print(f"Found {len(traj_dirs)} trajectory directories")
+    processed_dirs = []
+    
+    for traj_dir in traj_dirs:
+        print(f"\nProcessing trajectory: {os.path.basename(traj_dir)}")
+        try:
+            processed_dir = process_dataset(traj_dir, output_dir)
+            processed_dirs.append(processed_dir)
+        except Exception as e:
+            print(f"Error processing {traj_dir}: {str(e)}")
+            continue
+    
+    print(f"\nProcessed {len(processed_dirs)} trajectories successfully")
+    return processed_dirs
+
 if __name__ == "__main__":
-    data_dir = "/ssd/source/navigation/asset/nomad_adapter_dataset/raw_data/traj_20240101_120000"
+    raw_data_dir = "/ssd/source/navigation/asset/nomad_adapter_dataset/raw_data"
     output_dir = "/ssd/source/navigation/asset/nomad_adapter_dataset/processed_data"
-    processed_dir = process_dataset(data_dir, output_dir)
+    
+    processed_dirs = process_all_trajectories(raw_data_dir, output_dir)
+    
+    print("\nProcessed directories:")
+    for dir_path in processed_dirs:
+        print(f"- {dir_path}")
