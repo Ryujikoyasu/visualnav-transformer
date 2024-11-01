@@ -1,87 +1,77 @@
 import os
 import glob
 import numpy as np
-from datetime import datetime
 import pickle
+from typing import Dict, Tuple
 
-def downsample_dataset(data_dir, target_hz=4.0):
-    """データセットを指定のHzにダウンサンプリングする"""
+def process_dataset(data_dir: str, output_dir: str) -> str:
+    """
+    生データを処理して単一のデータセットを作成する
     
-    # 画像とtwistのファイル一覧を取得
+    Args:
+        data_dir: 生データのディレクトリ（traj_YYYYMMDD_HHMMSS形式）
+        output_dir: 処理済みデータの出力先ディレクトリ
+    
+    Returns:
+        str: 処理済みデータのディレクトリパス
+    """
+    # 入力データの確認
     image_files = sorted(glob.glob(os.path.join(data_dir, 'images', '*.jpg')))
     twist_files = sorted(glob.glob(os.path.join(data_dir, 'twists', '*.txt')))
     
-    # ファイル数の一致を確認
-    print(f"元の画像ファイル数: {len(image_files)}")
-    print(f"元のTwistファイル数: {len(twist_files)}")
+    print(f"=== Dataset Processing Info ===")
+    print(f"Source directory: {data_dir}")
+    print(f"Number of images: {len(image_files)}")
+    print(f"Number of twists: {len(twist_files)}")
     
-    # 少ない方に合わせる
-    min_files = min(len(image_files), len(twist_files))
-    image_files = image_files[:min_files]
-    twist_files = twist_files[:min_files]
-    
-    # タイムスタンプを抽出して時系列順にソート
-    timestamps = []
-    paired_files = []  # 画像とTwistのペアを保持
-    
-    for img_file, twist_file in zip(image_files, twist_files):
-        timestamp_str = os.path.basename(img_file).split('.')[0]
-        try:
-            timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S_%f')
-            timestamps.append(timestamp)
-            paired_files.append((img_file, twist_file))
-        except ValueError as e:
-            print(f"Warning: Skipping invalid timestamp in file {img_file}")
-            continue
-    
-    # タイムスタンプでソート
-    sorted_pairs = [x for _, x in sorted(zip(timestamps, paired_files))]
-    
-    # 目標の時間間隔（秒）
-    target_interval = 1.0 / target_hz
-    
-    # 保持するペアを選択
-    selected_pairs = [sorted_pairs[0]]  # 最初のペアは必ず含める
-    last_selected_time = timestamps[0]
-    
-    for i, ((img_file, twist_file), timestamp) in enumerate(zip(sorted_pairs[1:], timestamps[1:]), 1):
-        time_diff = (timestamp - last_selected_time).total_seconds()
-        if time_diff >= target_interval:
-            selected_pairs.append((img_file, twist_file))
-            last_selected_time = timestamp
-    
-    print(f"ダウンサンプリング後のデータ数: {len(selected_pairs)}")
-    
-    # 新しいディレクトリを作成
-    output_dir = data_dir + f"_{target_hz}hz"
-    os.makedirs(os.path.join(output_dir, 'images'), exist_ok=True)
-    os.makedirs(os.path.join(output_dir, 'twists'), exist_ok=True)
-    
-    # 選択されたファイルをコピー
-    import shutil
-    twists = []  # Twistデータを保存するリスト
-    
-    for i, (src_img, src_twist) in enumerate(selected_pairs):
-        # 画像のコピー
-        dst_img = os.path.join(output_dir, 'images', f'{i:06d}.jpg')
-        shutil.copy2(src_img, dst_img)
-        
-        # Twistデータの読み込みとコピー
-        with open(src_twist, 'r') as f:
+    # Twistデータの読み込みと正規化
+    twists = []
+    for twist_file in twist_files:
+        with open(twist_file, 'r') as f:
             twist_data = [float(x) for x in f.read().strip().split(',')]
             twists.append(twist_data)
-        
-        dst_twist = os.path.join(output_dir, 'twists', f'{i:06d}.txt')
-        shutil.copy2(src_twist, dst_twist)
     
-    # traj_data.pklの作成と保存
-    traj_data = {'twists': twists}
-    with open(os.path.join(output_dir, 'trajectory_001', 'traj_data.pkl'), 'wb') as f:
+    twists = np.array(twists)
+    twist_mean = np.mean(twists, axis=0)
+    twist_std = np.std(twists, axis=0)
+    twist_std = np.where(twist_std == 0, 1.0, twist_std)
+    
+    # 正規化されたTwistデータ
+    normalized_twists = (twists - twist_mean) / twist_std
+    
+    # 出力ディレクトリの作成
+    traj_name = os.path.basename(data_dir)
+    target_dir = os.path.join(output_dir, traj_name)
+    os.makedirs(target_dir, exist_ok=True)
+    
+    # データの保存
+    for i, (src_img, norm_twist) in enumerate(zip(image_files, normalized_twists)):
+        # 画像のシンボリックリンク作成
+        dst_img = os.path.join(target_dir, f'{i:06d}.jpg')
+        if os.path.exists(dst_img):
+            os.remove(dst_img)
+        os.symlink(src_img, dst_img)
+    
+    # traj_data.pklの保存（正規化前後のデータと統計量を含む）
+    traj_data = {
+        'raw_twists': twists.tolist(),
+        'normalized_twists': normalized_twists.tolist(),
+        'twist_mean': twist_mean.tolist(),
+        'twist_std': twist_std.tolist()
+    }
+    pkl_path = os.path.join(target_dir, 'traj_data.pkl')
+    with open(pkl_path, 'wb') as f:
         pickle.dump(traj_data, f)
     
-    print(f"処理完了: {output_dir}")
-    return output_dir
+    print(f"\nDataset processing completed!")
+    print(f"- Images: {target_dir}")
+    print(f"- Trajectory data: {pkl_path}")
+    print(f"- Total frames: {len(image_files)}")
+    print("========================")
+    
+    return target_dir
 
 if __name__ == "__main__":
-    data_dir = "/ssd/source/navigation/asset/nomad_adapter_dataset/raw_data"
-    downsample_dataset(data_dir, target_hz=4.0)
+    data_dir = "/ssd/source/navigation/asset/nomad_adapter_dataset/raw_data/traj_20240101_120000"
+    output_dir = "/ssd/source/navigation/asset/nomad_adapter_dataset/processed_data"
+    processed_dir = process_dataset(data_dir, output_dir)
