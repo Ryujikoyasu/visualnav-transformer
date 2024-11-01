@@ -145,6 +145,7 @@ if __name__ == "__main__":
     
     # 必要に応じてdictに変換
     config = OmegaConf.to_container(config, resolve=True)
+    print("Merged Config:", config)
     
     # WandBの設定
     # if config["use_wandb"]:
