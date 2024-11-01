@@ -25,13 +25,22 @@ class NoMaDAdapter(nn.Module):
         batch_size = obs_img.size(0)
         device = obs_img.device
         
+        # 観測画像のチャンネル数を確認
+        print(f"Input obs_img shape: {obs_img.shape}")
+        
         # 観測画像を3チャンネルずつ分割
+        num_channels = obs_img.size(1)
+        num_splits = num_channels // 3
         obs_img_split = torch.split(obs_img, 3, dim=1)
-        context_size = len(obs_img_split) - 1  # 最後の1枚をゴール画像として使用
+        
+        # 分割結果を確認
+        print(f"Number of splits: {len(obs_img_split)}")
+        for i, split in enumerate(obs_img_split):
+            print(f"Split {i} shape: {split.shape}")
         
         # コンテキスト画像とゴール画像を分離
-        context_imgs = torch.cat(obs_img_split[:-1], dim=1)  # (B, (context_size)*3, H, W)
-        goal_img = obs_img_split[-1]  # (B, 3, H, W)
+        context_imgs = obs_img[:, :-3]  # 最後の3チャンネルを除く
+        goal_img = obs_img[:, -3:]  # 最後の3チャンネル
         
         # 目標マスクを作成（常にマスク）
         goal_mask = torch.ones(batch_size, 1, device=device)
