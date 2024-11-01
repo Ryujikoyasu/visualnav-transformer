@@ -41,7 +41,7 @@ class NoMaDAdapter(nn.Module):
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
             obs_img=obs_img,  # 全ての観測画像（context_size * 3チャンネル）
-            goal_img=goal_img,  # 最後の観測画像（3チャンネル）
+            goal_img=obsgoal_img,  # 6チャンネルの画像
             input_goal_mask=goal_mask
         )
         
