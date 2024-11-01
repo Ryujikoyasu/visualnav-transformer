@@ -17,6 +17,8 @@ class TwistDataset(Dataset):
         """
         self.data_dir = data_dir
         self.transform = transform
+        self.context_size = context_size
+        self.len_traj_pred = len_traj_pred
         
         # trajectory_001ディレクトリのパス
         traj_dir = os.path.join(data_dir, 'trajectory_001')
