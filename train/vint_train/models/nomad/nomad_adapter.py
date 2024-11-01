@@ -1,43 +1,36 @@
 import torch
 import torch.nn as nn
 from .nomad import NoMaD
-from .adapter_modules import AdapterTransformerBlock
+from .adapter_modules import AdapterLayer
 
 class NoMaDAdapter(nn.Module):
     """
     Adapter層を組み込んだNOMADモデル
     """
-    def __init__(self, base_model: NoMaD, adapter_bottleneck_dim: int = 64):
+    def __init__(self, base_model: NoMaD, adapter_bottleneck_dim: int):
         super().__init__()
         self.base_model = base_model
         
-        # Transformerブロックを探してAdapterを追加
-        self._add_adapters(adapter_bottleneck_dim)
+        # Adapterレイヤーの初期化
+        self.vision_adapter = AdapterLayer(
+            input_dim=self.base_model.vision_encoder.obs_encoding_size,
+            bottleneck_dim=adapter_bottleneck_dim
+        )
         
-        # ベースモデルのパラメータをフリーズ
-        self._freeze_base_parameters()
+        # ベースモデルのパラメータを凍結
+        for param in self.base_model.parameters():
+            param.requires_grad = False
+            
+    def forward(self, obs_img, goal_img, goal_mask=None):
+        # ベースモデルのビジョンエンコーダを通す
+        obs_encoding = self.base_model.vision_encoder(obs_img, goal_img, goal_mask)
         
-    def _add_adapters(self, adapter_bottleneck_dim):
-        """Transformer層にAdapter層を追加"""
-        for name, module in self.base_model.named_modules():
-            if "TransformerBlock" in module.__class__.__name__:
-                parent_name = ".".join(name.split(".")[:-1])
-                block_name = name.split(".")[-1]
-                parent = self.base_model
-                for part in parent_name.split("."):
-                    parent = getattr(parent, part)
-                setattr(parent, block_name, 
-                       AdapterTransformerBlock(module, adapter_bottleneck_dim))
+        # Adapterを通す
+        adapted_encoding = self.vision_adapter(obs_encoding)
+        
+        # 残りの処理はベースモデルと同じ
+        return self.base_model.forward_with_encoding(adapted_encoding)
     
-    def _freeze_base_parameters(self):
-        """Adapter以外のパラメータをフリーズ"""
-        for name, param in self.base_model.named_parameters():
-            if "adapter" not in name:
-                param.requires_grad = False
-    
-    def forward(self, func_name, **kwargs):
-        return self.base_model(func_name, **kwargs)
-
     def get_adapter_parameters(self):
-        """Adapter層のパラメータのみを返す"""
-        return [p for n, p in self.named_parameters() if "adapter" in n] 
+        """Adapterのパラメータのみを返す"""
+        return self.vision_adapter.parameters()

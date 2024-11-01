@@ -111,8 +111,20 @@ def main(config):
     )
     model = model.to(device)
     
+    # デバッグ情報の追加
+    print("Adapter parameters:")
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print(f"{name}: {param.shape}")
+    
+    adapter_params = list(model.get_adapter_parameters())
+    print(f"Number of adapter parameters: {len(adapter_params)}")
+    
     # オプティマイザとスケジューラの設定
-    optimizer = Adam(model.get_adapter_parameters(), lr=config["adapter"]["lr"])
+    if len(adapter_params) == 0:
+        raise ValueError("No adapter parameters found! Check the adapter implementation.")
+        
+    optimizer = Adam(adapter_params, lr=config["adapter"]["lr"])
     
     noise_scheduler = DDPMScheduler(
         num_train_timesteps=config["num_diffusion_iters"],

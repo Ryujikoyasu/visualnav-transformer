@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
-class Adapter(nn.Module):
+class AdapterLayer(nn.Module):
     """
     Transformer層に追加するAdapter層
     """
-    def __init__(self, input_dim, bottleneck_dim):
+    def __init__(self, input_dim: int, bottleneck_dim: int):
         super().__init__()
         self.down_project = nn.Linear(input_dim, bottleneck_dim)
         self.up_project = nn.Linear(bottleneck_dim, input_dim)
@@ -15,7 +16,7 @@ class Adapter(nn.Module):
         residual = x
         x = self.layer_norm(x)
         x = self.down_project(x)
-        x = torch.nn.functional.relu(x)
+        x = F.relu(x)
         x = self.up_project(x)
         return x + residual
 
@@ -26,11 +27,11 @@ class AdapterTransformerBlock(nn.Module):
     def __init__(self, base_transformer_block, adapter_bottleneck_dim):
         super().__init__()
         self.base_block = base_transformer_block
-        self.adapter1 = Adapter(
+        self.adapter1 = AdapterLayer(
             input_dim=base_transformer_block.norm1.normalized_shape[0],
             bottleneck_dim=adapter_bottleneck_dim
         )
-        self.adapter2 = Adapter(
+        self.adapter2 = AdapterLayer(
             input_dim=base_transformer_block.norm2.normalized_shape[0],
             bottleneck_dim=adapter_bottleneck_dim
         )
