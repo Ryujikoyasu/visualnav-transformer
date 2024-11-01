@@ -126,6 +126,16 @@ def main(config):
         
     optimizer = Adam(adapter_params, lr=config["adapter"]["lr"])
     
+    # 学習率スケジューラの設定を追加
+    lr_scheduler = None
+    if config["scheduler"]["name"] == "cosine":
+        from torch.optim.lr_scheduler import CosineAnnealingLR
+        lr_scheduler = CosineAnnealingLR(
+            optimizer,
+            T_max=config["num_epochs"],
+            eta_min=0.0
+        )
+    
     noise_scheduler = DDPMScheduler(
         num_train_timesteps=config["num_diffusion_iters"],
         beta_schedule='squaredcos_cap_v2',
@@ -133,12 +143,17 @@ def main(config):
         prediction_type='epsilon'
     )
     
+    # プロジェクトフォルダの設定
+    project_folder = os.path.join("experiments", config["project_name"], config["run_name"])
+    os.makedirs(project_folder, exist_ok=True)
+    
     # 学習の実行
     metrics = train_eval_loop_nomad_adapter(
         model=model,
         train_loader=train_loader,
         test_dataloaders={"test": test_loader},
         optimizer=optimizer,
+        lr_scheduler=lr_scheduler,  # 追加
         noise_scheduler=noise_scheduler,
         transform=transform,
         device=device,
@@ -150,7 +165,8 @@ def main(config):
         num_images_log=config["num_images_log"],
         eval_fraction=config["eval_fraction"],
         goal_mask_prob=config["goal_mask_prob"],
-        use_wandb=config["use_wandb"]
+        use_wandb=config["use_wandb"],
+        project_folder=project_folder  # 追加
     )
     
     print(f"Training completed. Final metrics: {metrics}")
