@@ -67,12 +67,18 @@ class TwistDataset(Dataset):
                 image = self.transform(image)
             context_images.append(image)
         
+        # 画像の形状を変更
+        # (context_size, C, H, W) -> (1, context_size*C, H, W)
+        context_images = torch.stack(context_images)  # (context_size, C, H, W)
+        B, C, H, W = context_images.shape
+        context_images = context_images.view(1, B*C, H, W)  # (1, context_size*C, H, W)
+        
         # 予測対象のTwistデータ
         twist_indices = range(start_idx + self.context_size, 
                             start_idx + self.context_size + self.len_traj_pred)
         twist_data = [traj_data['normalized_twists'][i] for i in twist_indices]
         
         return {
-            'image': torch.stack(context_images),  # (context_size, C, H, W)
+            'image': context_images,  # (1, context_size*C, H, W)
             'twist': torch.tensor(twist_data, dtype=torch.float32),  # (len_traj_pred, 2)
         }
