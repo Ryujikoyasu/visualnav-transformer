@@ -56,12 +56,18 @@ def main(config):
     # ベースモデルの作成
     vision_encoder = NoMaD_ViNT(
         obs_encoding_size=config["encoding_size"],
-        context_size=config["context_size"],
+        context_size=5,
         mha_num_attention_heads=config["mha_num_attention_heads"],
         mha_num_attention_layers=config["mha_num_attention_layers"],
         mha_ff_dim_factor=config["mha_ff_dim_factor"],
     )
     vision_encoder = replace_bn_with_gn(vision_encoder)
+    
+    # 位置エンコーディングのバッファを事前に初期化
+    vision_encoder.positional_encoding.register_buffer(
+        'pos_enc',
+        vision_encoder.positional_encoding.pos_enc[:, :5]
+    )
     
     noise_pred_net = ConditionalUnet1D(
         input_dim=2,
