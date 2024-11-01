@@ -142,11 +142,15 @@ def main(config):
         noise_scheduler=noise_scheduler,
         transform=transform,
         device=device,
-        train_model=True,
+        train_model=config["train"],
         epochs=config["num_epochs"],
         eval_freq=config["eval_freq"],
-        print_freq=config["print_log_freq"],
-        goal_mask_prob=config["goal_mask_prob"]
+        print_log_freq=config["print_log_freq"],
+        image_log_freq=config["image_log_freq"],
+        num_images_log=config["num_images_log"],
+        eval_fraction=config["eval_fraction"],
+        goal_mask_prob=config["goal_mask_prob"],
+        use_wandb=config["use_wandb"]
     )
     
     print(f"Training completed. Final metrics: {metrics}")
