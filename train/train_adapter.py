@@ -24,7 +24,7 @@ def main(config):
     # データセットの準備
     transform = transforms.Compose([
         transforms.Normalize(mean=[0.485, 0.456, 0.406], 
-                           std=[0.229, 0.224, 0.225]),
+                             std=[0.229, 0.224, 0.225]),
     ])
     
     # データローダーの作成
@@ -56,7 +56,7 @@ def main(config):
     # ベースモデルの作成
     vision_encoder = NoMaD_ViNT(
         obs_encoding_size=config["encoding_size"],
-        context_size=5,
+        context_size=config["context_size"],  # 設定ファイルから取得
         mha_num_attention_heads=config["mha_num_attention_heads"],
         mha_num_attention_layers=config["mha_num_attention_layers"],
         mha_ff_dim_factor=config["mha_ff_dim_factor"],
@@ -66,7 +66,7 @@ def main(config):
     # 位置エンコーディングのバッファを事前に初期化
     vision_encoder.positional_encoding.register_buffer(
         'pos_enc',
-        vision_encoder.positional_encoding.pos_enc[:, :5]
+        vision_encoder.positional_encoding.pos_enc[:, :config["context_size"]]
     )
     
     noise_pred_net = ConditionalUnet1D(
@@ -86,15 +86,14 @@ def main(config):
     
     # 事前学習済みの重みをロード
     checkpoint = torch.load(config["pretrained_path"])
-    print("Checkpoint keys:", checkpoint.keys())  # デバッグ用：利用可能なキーを確認
+    print("Checkpoint keys:", checkpoint.keys())  # デバッグ用
     
-    # チェックポイントの構造に応じて適切にロード
+    # チェックポイントの構造に応じてロード
     if "model_state_dict" in checkpoint:
         state_dict = checkpoint["model_state_dict"]
     elif "state_dict" in checkpoint:
         state_dict = checkpoint["state_dict"]
     else:
-        # チェックポイントそのものがstate_dictの場合
         state_dict = checkpoint
     
     # 互換性のないキーをスキップしてロード
@@ -166,8 +165,7 @@ def main(config):
         eval_fraction=config["eval_fraction"],
         goal_mask_prob=config["goal_mask_prob"],
         use_wandb=config["use_wandb"],
-        project_folder=project_folder,
-        parameters=adapter_params
+        project_folder=project_folder
     )
     
     print(f"Training completed. Final metrics: {metrics}")
@@ -177,14 +175,8 @@ if __name__ == "__main__":
     parser.add_argument("--config", "-c", default="config/nomad_adapter.yaml")
     args = parser.parse_args()
     
-    # まずbase_configを読み込む
-    base_config = OmegaConf.load("/ssd/source/navigation/visualnav-transformer/train/config/nomad_adapter.yaml")
-    
-    # adapter_configを読み込む
-    adapter_config = OmegaConf.load(args.config)
-    
-    # マージする際に、adapter_configを優先させる
-    config = OmegaConf.merge(base_config, adapter_config)
+    # 設定の読み込み
+    config = OmegaConf.load(args.config)
     
     # 設定の整合性チェックと調整
     if "defaults" in config:
