@@ -34,8 +34,8 @@ def main(config):
     train_dataset = TwistDataset(
         data_dir=config["datasets"]["twist_data"]["train"],
         transform=transform,
-        context_size=5,  # モデルのcontext_sizeに合わせる
-        len_traj_pred=config["len_traj_pred"]
+        context_size=config["context_size"],  # 設定ファイルから取得
+        len_traj_pred=config["len_traj_pred"]  # 設定ファイルから取得
     )
     
     train_loader = DataLoader(
@@ -79,7 +79,7 @@ def main(config):
     # ベースモデルの作成
     vision_encoder = NoMaD_ViNT(
         obs_encoding_size=config["encoding_size"],
-        context_size=5,  # 事前学習済みモデルのcontext_sizeに固定
+        context_size=config["context_size"],  # 設定ファイルから取得
         mha_num_attention_heads=config["mha_num_attention_heads"],
         mha_num_attention_layers=config["mha_num_attention_layers"],
         mha_ff_dim_factor=config["mha_ff_dim_factor"],
@@ -125,6 +125,15 @@ def main(config):
     print("Unexpected keys:", unexpected_keys)
     
     print(f"Loaded pretrained model from {config['pretrained_path']}")
+    
+    # 事前学習済みの重みをロード後に、位置エンコーディングの形状を確認
+    if 'vision_encoder.positional_encoding.pos_enc' in state_dict:
+        pos_enc_shape = state_dict['vision_encoder.positional_encoding.pos_enc'].shape
+        print(f"Checkpoint pos_enc shape: {pos_enc_shape}")
+
+    # 現在のモデルの形状も確認
+    current_pos_enc_shape = vision_encoder.positional_encoding.pos_enc.shape
+    print(f"Current model pos_enc shape: {current_pos_enc_shape}")
     
     # Adapterモデルの作成
     model = NoMaDAdapter(
