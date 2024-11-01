@@ -136,7 +136,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # まずbase_configを読み込む
-    base_config = OmegaConf.load("config/nomad.yaml")
+    base_config = OmegaConf.load("/ssd/source/navigation/visualnav-transformer/train/config/nomad_adapter.yaml")
     
     # adapter_configを読み込む
     adapter_config = OmegaConf.load(args.config)

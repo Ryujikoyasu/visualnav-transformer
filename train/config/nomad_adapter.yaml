@@ -1,11 +1,14 @@
-# @package _global_
-defaults:
-  - nomad
-  - _self_
-
 # モデル設定
 model_type: nomad_adapter
 vision_encoder: nomad_vint
+encoding_size: 256
+obs_encoder: efficientnet-b0
+attn_unet: False
+cond_predict_scale: False
+mha_num_attention_heads: 4
+mha_num_attention_layers: 4
+mha_ff_dim_factor: 4
+down_dims: [64, 128, 256]
 
 # 事前学習済みモデルのパス
 pretrained_path: "/ssd/source/navigation/visualnav-transformer/deployment/model_weights/nomad.pth"
@@ -23,12 +26,13 @@ optimizer: adam
 lr: 1e-4
 num_epochs: 50
 
+# コンテキスト設定
+context_type: temporal
+context_size: 5
+alpha: 1e-4
 
-eval_freq: 5
-print_log_freq: 100
-image_log_freq: 1000
-num_images_log: 4
-eval_fraction: 0.25
+# Diffusionモデルのパラメータ
+num_diffusion_iters: 10
 
 # データセット設定
 datasets:
@@ -39,7 +43,12 @@ datasets:
     goals_per_obs: 1
     negative_mining: False
 
-# プロジェクト設定
+# ロギング設定
+eval_freq: 5
+print_log_freq: 100
+image_log_freq: 1000
+num_images_log: 4
+eval_fraction: 0.25
 project_name: nomad_adapter
 run_name: nomad_adapter_test
 use_wandb: False
@@ -48,9 +57,22 @@ use_wandb: False
 normalize: True
 goal_type: "image"
 goal_mask_prob: 1.0
+image_size: [96, 96]
 
 # 学習率スケジューラの設定
 scheduler:
   name: "cosine"
   num_warmup_steps: 0
   num_cycles: 1
+
+# 距離の境界設定
+distance:
+  min_dist_cat: 0
+  max_dist_cat: 20
+action:
+  min_dist_cat: 3
+  max_dist_cat: 20
+
+# 行動出力パラメータ
+len_traj_pred: 8
+learn_angle: False
