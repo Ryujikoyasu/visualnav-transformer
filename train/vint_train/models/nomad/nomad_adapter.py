@@ -22,24 +22,24 @@ class NoMaDAdapter(nn.Module):
             param.requires_grad = False
             
     def forward(self, obs_img, noisy_actions, timesteps):
-        # Twistデータセットでは目標画像を使用しないので、ダミーの目標画像を作成
-        batch_size = obs_img.size(0)
-        device = obs_img.device
-        
-        # ダミーの目標画像（ゼロで初期化）
-        goal_img = torch.zeros_like(obs_img[:, :3])  # 最初の3チャンネル分のサイズで作成
-        
-        # 常に目標をマスク
-        goal_mask = torch.ones(batch_size, 1, device=device)
-        
-        # ベースモデルのビジョンエンコーダを通す
-        obs_encoding = self.base_model.vision_encoder(obs_img, goal_img, goal_mask)
+        # vision_encoderを通す
+        obs_encoding = self.base_model.forward(
+            func_name="vision_encoder",
+            obs_img=obs_img,
+            goal_img=None,  # ゴール画像は使用しない
+            input_goal_mask=None  # マスクも使用しない
+        )
         
         # Adapterを通す
         adapted_encoding = self.vision_adapter(obs_encoding)
         
-        # ノイズ予測ネットワークを通す
-        noise_pred = self.base_model.noise_pred_net(noisy_actions, adapted_encoding, timesteps)
+        # noise_pred_netを通す
+        noise_pred = self.base_model.forward(
+            func_name="noise_pred_net",
+            sample=noisy_actions,
+            timestep=timesteps,
+            global_cond=adapted_encoding
+        )
         
         return noise_pred
     
