@@ -136,7 +136,7 @@ def main(config):
     # 学習の実行
     # configから必要なパラメータを抽出
     train_config = {
-        "num_epochs": config["num_epochs"],
+        "epochs": config["num_epochs"],
         "eval_freq": config["eval_freq"],
         "print_log_freq": config["print_log_freq"],
         "image_log_freq": config["image_log_freq"],
@@ -155,7 +155,7 @@ def main(config):
         test_dataloaders={"test": test_loader},
         transform=transform,
         device=device,
-        **train_config  # configから必要なパラメータのみを渡す
+        **train_config  # 修正したconfigを渡す
     )
     
     print(f"Training completed. Final metrics: {metrics}")
