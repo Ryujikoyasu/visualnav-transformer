@@ -43,7 +43,7 @@ normalize: True
 
 # context
 context_type: temporal
-context_size: 5 # default:3 
+context_size: 3 # default:3 
 alpha: 1e-4
 
 # distance bounds for distance and action and distance predictions 

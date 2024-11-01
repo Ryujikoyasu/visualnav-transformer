@@ -8,7 +8,7 @@ model_type: nomad_adapter
 vision_encoder: nomad_vint
 
 # 事前学習済みモデルのパス
-pretrained_path: "/ssd/source/navigation/visualnav-transformer/deployment/model_weights/nomad.pth"  # ここに事前学習済みモデルのパスを指定
+pretrained_path: "/ssd/source/navigation/visualnav-transformer/deployment/model_weights/nomad.pth"
 
 # Adapter固有の設定
 adapter:
@@ -21,7 +21,9 @@ batch_size: 8
 num_workers: 4
 optimizer: adam
 lr: 1e-4
-num_epochs: 50  # Adapterは少ないパラメータなので調整
+num_epochs: 50
+
+
 eval_freq: 5
 print_log_freq: 100
 image_log_freq: 1000
@@ -45,9 +47,7 @@ use_wandb: False
 # その他の設定
 normalize: True
 goal_type: "image"
-
-# ゴールマスクを常に適用
-goal_mask_prob: 1.0  # 探索タスク用に常にマスク
+goal_mask_prob: 1.0
 
 # 学習率スケジューラの設定
 scheduler:
