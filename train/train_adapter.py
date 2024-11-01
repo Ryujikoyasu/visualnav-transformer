@@ -144,8 +144,11 @@ if __name__ == "__main__":
     
     # 必要に応じてdictに変換
     config = OmegaConf.to_container(config, resolve=True)
-    print("Merged Config:", config)
-    
+    # マージ後の設定を詳細に出力
+    print("Merged Config:")
+    for key, value in config.items():
+        print(f"{key}: {value}")
+
     # WandBの設定
     # if config["use_wandb"]:
     #     wandb.login()
@@ -155,4 +158,4 @@ if __name__ == "__main__":
     #         config=config
     #     )
     
-    # main(config)
+    main(config)
