@@ -153,7 +153,7 @@ def main(config):
         train_loader=train_loader,
         test_dataloaders={"test": test_loader},
         optimizer=optimizer,
-        lr_scheduler=lr_scheduler,  # 追加
+        lr_scheduler=lr_scheduler,
         noise_scheduler=noise_scheduler,
         transform=transform,
         device=device,
@@ -166,7 +166,8 @@ def main(config):
         eval_fraction=config["eval_fraction"],
         goal_mask_prob=config["goal_mask_prob"],
         use_wandb=config["use_wandb"],
-        project_folder=project_folder  # 追加
+        project_folder=project_folder,
+        parameters=adapter_params
     )
     
     print(f"Training completed. Final metrics: {metrics}")
