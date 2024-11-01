@@ -45,8 +45,8 @@ datasets:
 
 # ロギング設定
 eval_freq: 5
-print_log_freq: 100
-image_log_freq: 1000
+print_log_freq: 10
+image_log_freq: 100
 num_images_log: 4
 eval_fraction: 0.25
 project_name: nomad_adapter

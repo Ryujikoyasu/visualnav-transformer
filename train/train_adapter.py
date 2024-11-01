@@ -225,12 +225,12 @@ if __name__ == "__main__":
     config = OmegaConf.to_container(config, resolve=True)
     
     # WandBの設定（コメントアウトされたまま）
-    # if config["use_wandb"]:
-    #     wandb.login()
-    #     wandb.init(
-    #         project=config["project_name"],
-    #         name=f"adapter_{time.strftime('%Y%m%d_%H%M%S')}",
-    #         config=config
-    #     )
+    if config["use_wandb"]:
+        wandb.login()
+        wandb.init(
+            project=config["project_name"],
+            name=f"adapter_{time.strftime('%Y%m%d_%H%M%S')}",
+            config=config
+        )
     
     main(config)
