@@ -34,11 +34,14 @@ class NoMaDAdapter(nn.Module):
         # 目標マスクを作成（常にマスク）
         goal_mask = torch.ones(batch_size, 1, device=device)
         
+        # vision_encoderを通す前に、obsgoal_imgを作成
+        obsgoal_img = torch.cat([last_obs, goal_img], dim=1)  # (B, 6, H, W)
+        
         # vision_encoderを通す
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
             obs_img=obs_img,  # 全ての観測画像（context_size * 3チャンネル）
-            goal_img=goal_img,  # 最後の観測画像（3チャンネル）
+            goal_img=obsgoal_img,  # 6チャンネルの画像（last_obs + goal_img）
             input_goal_mask=goal_mask
         )
         
