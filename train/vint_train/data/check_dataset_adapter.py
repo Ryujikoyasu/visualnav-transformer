@@ -120,7 +120,7 @@ if __name__ == "__main__":
     output_dir = "/ssd/source/navigation/asset/nomad_adapter_dataset/processed_data"
     
     # YAMLファイルから設定を読み込む
-    config_path = "train/config/nomad_adapter.yaml"
+    config_path = "/ssd/source/navigation/visualnav-transformer/train/config/nomad_adapter.yaml"
     config = load_config(config_path)
     image_size = tuple(config["image_size"])  # (width, height)
     
