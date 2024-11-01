@@ -2,15 +2,24 @@ import os
 import glob
 import numpy as np
 import pickle
+import yaml
+import cv2
 from typing import Dict, Tuple, List
 
-def process_dataset(data_dir: str, output_dir: str) -> str:
+def load_config(yaml_path: str) -> Dict:
+    """YAMLファイルを読み込んで辞書として返す"""
+    with open(yaml_path, 'r') as file:
+        config = yaml.safe_load(file)
+    return config
+
+def process_dataset(data_dir: str, output_dir: str, image_size: Tuple[int, int]) -> str:
     """
     生データを処理して単一のデータセットを作成する
     
     Args:
         data_dir: 生データのディレクトリ（traj_YYYYMMDD_HHMMSS形式）
         output_dir: 処理済みデータの出力先ディレクトリ
+        image_size: 画像のリサイズ先のサイズ (width, height)
     
     Returns:
         str: 処理済みデータのディレクトリパス
@@ -46,11 +55,13 @@ def process_dataset(data_dir: str, output_dir: str) -> str:
     
     # データの保存
     for i, (src_img, norm_twist) in enumerate(zip(image_files, normalized_twists)):
-        # 画像のシンボリックリンク作成
+        # 画像の読み込みとリサイズ
+        image = cv2.imread(src_img)
+        resized_image = cv2.resize(image, image_size)
+        
+        # 画像の保存
         dst_img = os.path.join(target_dir, f'{i:06d}.jpg')
-        if os.path.exists(dst_img):
-            os.remove(dst_img)
-        os.symlink(src_img, dst_img)
+        cv2.imwrite(dst_img, resized_image)
     
     # traj_data.pklの保存（正規化前後のデータと統計量を含む）
     traj_data = {
@@ -71,13 +82,14 @@ def process_dataset(data_dir: str, output_dir: str) -> str:
     
     return target_dir
 
-def process_all_trajectories(raw_data_dir: str, output_dir: str) -> List[str]:
+def process_all_trajectories(raw_data_dir: str, output_dir: str, image_size: Tuple[int, int]) -> List[str]:
     """
     raw_dataディレクトリ内の全てのトラジェクトリデータを処理する
     
     Args:
         raw_data_dir: 生データのルートディレクトリ
         output_dir: 処理済みデータの出力先ディレクトリ
+        image_size: 画像のリサイズ先のサイズ (width, height)
     
     Returns:
         List[str]: 処理されたデータセットのディレクトリパスのリスト
@@ -94,7 +106,7 @@ def process_all_trajectories(raw_data_dir: str, output_dir: str) -> List[str]:
     for traj_dir in traj_dirs:
         print(f"\nProcessing trajectory: {os.path.basename(traj_dir)}")
         try:
-            processed_dir = process_dataset(traj_dir, output_dir)
+            processed_dir = process_dataset(traj_dir, output_dir, image_size)
             processed_dirs.append(processed_dir)
         except Exception as e:
             print(f"Error processing {traj_dir}: {str(e)}")
@@ -107,7 +119,12 @@ if __name__ == "__main__":
     raw_data_dir = "/ssd/source/navigation/asset/nomad_adapter_dataset/raw_data"
     output_dir = "/ssd/source/navigation/asset/nomad_adapter_dataset/processed_data"
     
-    processed_dirs = process_all_trajectories(raw_data_dir, output_dir)
+    # YAMLファイルから設定を読み込む
+    config_path = "train/config/nomad_adapter.yaml"
+    config = load_config(config_path)
+    image_size = tuple(config["image_size"])  # (width, height)
+    
+    processed_dirs = process_all_trajectories(raw_data_dir, output_dir, image_size)
     
     print("\nProcessed directories:")
     for dir_path in processed_dirs:
