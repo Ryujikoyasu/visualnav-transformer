@@ -33,8 +33,7 @@ tmux select-pane -t 2
 tmux send-keys "ros2 run gstreamer_camera gstreamer_camera_node" Enter
 
 tmux select-pane -t 3
-tmux send-keys "conda activate vint_deployment_2" Enter
-tmux send-keys "python joy_teleop.py" Enter
+tmux send-keys "ros2 launch teleop_twist_joy teleop-launch.py joy_vel:=/cmd_vel_mux/input/teleop" Enter
 
 # twist_mux node setup
 tmux select-pane -t 4
