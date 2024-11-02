@@ -31,13 +31,18 @@ class NoMaDAdapter(nn.Module):
         # 2. obsgoal_imgの作成（現在の観測画像とゴール画像を結合）
         obsgoal_img = torch.cat([current_obs, goal_image], dim=1)  # (B, 6, H, W)
         
-        # 3. vision_encoderを通す
+        # 3. vision_encoderを通す（obs_encoderとgoal_encoderの出力サイズを確認）
+        print(f"obs_img shape: {obs_img.shape}")
+        print(f"obsgoal_img shape: {obsgoal_img.shape}")
+        
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
-            obs_img=obs_img,      # context_size枚の画像全体（obs_encoderで処理）
+            obs_img=obs_img,      # context_size枚の画像全体（obs_encoderで処理）＋
             goal_img=obsgoal_img, # 6チャンネル画像（goal_encoderで処理）
             input_goal_mask=torch.ones(batch_size, 1, device=device)
         )
+        
+        print(f"obs_encoding shape after vision_encoder: {obs_encoding.shape}")
         
         # 4. Adapterを通す
         adapted_encoding = self.vision_adapter(obs_encoding)

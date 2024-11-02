@@ -90,9 +90,16 @@ def train_eval_loop_nomad_adapter(
                 optimizer.zero_grad()
                 
                 # データの準備
-                images = batch['image'].to(device)
-                goal_images = batch['goal_image'].to(device)
+                images = batch['image'].to(device)  # (B, context_size*C, H, W)
+                goal_images = batch['goal_image'].to(device)  # (B, C, H, W)
                 noisy_twists = batch['twist'].to(device)
+                
+                # バッチサイズの確認
+                print(f"Debug - Batch shapes:")
+                print(f"images: {images.shape}")
+                print(f"goal_images: {goal_images.shape}")
+                print(f"noisy_twists: {noisy_twists.shape}")
+                
                 timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (noisy_twists.shape[0],), device=device).long()
                 
                 # ノイズの追加とモデルの予測
