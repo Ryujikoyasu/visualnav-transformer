@@ -91,15 +91,16 @@ def train_eval_loop_nomad_adapter(
                 
                 # データの準備
                 images = batch['image'].to(device)
-                twists = batch['twist'].to(device)
+                goal_images = batch['goal_image'].to(device)
+                noisy_twists = batch['twist'].to(device)
+                timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (noisy_twists.shape[0],), device=device).long()
                 
                 # ノイズの追加とモデルの予測
-                noise = torch.randn_like(twists)
-                timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (twists.shape[0],), device=device).long()
-                noisy_twists = noise_scheduler.add_noise(twists, noise, timesteps)
+                noise = torch.randn_like(noisy_twists)
+                noisy_twists = noise_scheduler.add_noise(noisy_twists, noise, timesteps)
                 
                 # モデルの予測（ゴール情報なし）
-                noise_pred = model(images, noisy_twists, timesteps)  # goal_mask引数を削除
+                noise_pred = model(images, goal_images, noisy_twists, timesteps)
                 
                 # 損失の計算
                 loss = torch.nn.functional.mse_loss(noise_pred, noise)
@@ -157,6 +158,7 @@ def train_eval_loop_nomad_adapter(
                 with torch.no_grad():
                     for test_batch in test_loader:
                         images = test_batch['image'].to(device)
+                        goal_images = test_batch['goal_image'].to(device)
                         twists = test_batch['twist'].to(device)
                         
                         # 評価時もゴール画像を常にマスク
@@ -167,7 +169,7 @@ def train_eval_loop_nomad_adapter(
                         noisy_twists = noise_scheduler.add_noise(twists, noise, timesteps)
                         
                         # ゴールマスクを追加
-                        noise_pred = ema_model.averaged_model(images, noisy_twists, timesteps, goal_mask=goal_mask)
+                        noise_pred = ema_model.averaged_model(images, goal_images, noisy_twists, timesteps, goal_mask=goal_mask)
                         
                         # 損失の計算
                         loss = torch.nn.functional.mse_loss(noise_pred, noise)
