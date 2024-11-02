@@ -69,8 +69,10 @@ class TwistDataset(Dataset):
         
         # 画像の形状を変更
         context_images = torch.stack(context_images)  # (context_size, C, H, W)
+        print(f"Debug - context_images shape after stack: {context_images.shape}")       
         context_images = context_images.view(1, -1, context_images.size(2), context_images.size(3))  # (1, context_size*C, H, W)
-        
+        print(f"Debug - context_images shape after view: {context_images.shape}")
+
         # ゴール画像の読み込み（データセットの最後の画像）
         goal_img_path = os.path.join(traj_dir, f'{len(traj_data["normalized_twists"]) - 1:06d}.jpg')
         goal_image = cv2.imread(goal_img_path)
@@ -81,6 +83,8 @@ class TwistDataset(Dataset):
             goal_image = self.transform(goal_image)
         goal_image = goal_image.unsqueeze(0)  # (1, C, H, W)
         
+        print(f"Debug - goal_image shape: {goal_image.shape}")
+
         # 予測対象のTwistデータ
         twist_indices = range(start_idx + self.context_size, 
                              start_idx + self.context_size + self.len_traj_pred)

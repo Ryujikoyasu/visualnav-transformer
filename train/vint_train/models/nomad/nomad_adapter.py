@@ -22,30 +22,42 @@ class NoMaDAdapter(nn.Module):
             param.requires_grad = False
             
     def forward(self, obs_img, goal_image, noisy_actions, timesteps):
+        print("\n=== NoMaDAdapter Forward Pass Debug ===")
+        print(f"Input shapes:")
+        print(f"obs_img: {obs_img.shape}")
+        print(f"goal_image: {goal_image.shape}")
+        print(f"noisy_actions: {noisy_actions.shape}")
+        
         batch_size = obs_img.size(0)
         device = obs_img.device
         
         # 1. 現在の観測画像の取得（context_size枚目の画像）
-        current_obs = obs_img[:, -3:, :, :]  # 最後の3チャンネル
+        current_obs = obs_img[:, -3:, :, :]
+        print(f"current_obs shape: {current_obs.shape}")
         
         # 2. obsgoal_imgの作成（現在の観測画像とゴール画像を結合）
-        obsgoal_img = torch.cat([current_obs, goal_image], dim=1)  # (B, 6, H, W)
+        # goal_imageのバッチ次元を確認・調整
+        if goal_image.dim() == 3:
+            goal_image = goal_image.unsqueeze(0)
+        if goal_image.size(1) != 3:
+            goal_image = goal_image.view(batch_size, 3, *goal_image.shape[2:])
+        print(f"goal_image shape after adjustment: {goal_image.shape}")
         
-        # 3. vision_encoderを通す（obs_encoderとgoal_encoderの出力サイズを確認）
-        print(f"obs_img shape: {obs_img.shape}")
+        obsgoal_img = torch.cat([current_obs, goal_image], dim=1)
         print(f"obsgoal_img shape: {obsgoal_img.shape}")
         
+        # 3. vision_encoderを通す
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
-            obs_img=obs_img,      # context_size枚の画像全体（obs_encoderで処理）＋
-            goal_img=obsgoal_img, # 6チャンネル画像（goal_encoderで処理）
+            obs_img=obs_img,
+            goal_img=obsgoal_img,
             input_goal_mask=torch.ones(batch_size, 1, device=device)
         )
-        
-        print(f"obs_encoding shape after vision_encoder: {obs_encoding.shape}")
+        print(f"obs_encoding shape: {obs_encoding.shape}")
         
         # 4. Adapterを通す
         adapted_encoding = self.vision_adapter(obs_encoding)
+        print(f"adapted_encoding shape: {adapted_encoding.shape}")
         
         # 5. noise_pred_netを通す
         noise_pred = self.base_model.forward(
@@ -54,6 +66,8 @@ class NoMaDAdapter(nn.Module):
             timestep=timesteps,
             global_cond=adapted_encoding
         )
+        print(f"noise_pred shape: {noise_pred.shape}")
+        print("===================================\n")
         
         return noise_pred
     
