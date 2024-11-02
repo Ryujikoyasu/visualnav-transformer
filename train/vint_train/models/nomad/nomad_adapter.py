@@ -21,30 +21,21 @@ class NoMaDAdapter(nn.Module):
         for param in self.base_model.parameters():
             param.requires_grad = False
             
-    def forward(self, obs_img, noisy_actions, timesteps):
+    def forward(self, obs_img, goal_image, noisy_actions, timesteps):
         batch_size = obs_img.size(0)
         device = obs_img.device
 
-        # 観測画像を3チャンネルずつ分割
-        obs_img_split = torch.split(obs_img, 3, dim=1)
+        # 6チャンネルの目標画像を作成
+        obsgoal_img = torch.cat([obs_img[:, -3:, :, :], goal_image], dim=1)  # (B, 6, H, W)
 
-        # 1. goal_encoder用の入力を準備
-        last_obs = obs_img_split[-1]  # 最後の3チャンネル
-
-        # goal_maskをゼロに設定（ゴールがないことを示す）
-        goal_mask = torch.zeros(batch_size, 1, device=device)  # (B, 1)
-
-        # goal_imgをゼロテンソルに設定（チャンネル数を6にする）
-        obsgoal_img = torch.zeros(batch_size, 6, last_obs.size(2), last_obs.size(3), device=device)  # (B, 6, H, W)
-
-        # 2. obs_encoder用の入力を準備
-        context_imgs = obs_img  # 元の形状のまま使用
+        # 目標マスクを作成（常にマスク）
+        goal_mask = torch.ones(batch_size, 1, device=device)
 
         # vision_encoderを通す
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
-            obs_img=context_imgs,     # 全ての観測画像
-            goal_img=obsgoal_img,     # 6チャンネルのゼロテンソル
+            obs_img=obs_img,     # 全ての観測画像
+            goal_img=obsgoal_img,     # 6チャンネルの目標画像
             input_goal_mask=goal_mask
         )
 
