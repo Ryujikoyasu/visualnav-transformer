@@ -24,32 +24,33 @@ class NoMaDAdapter(nn.Module):
     def forward(self, obs_img, noisy_actions, timesteps):
         batch_size = obs_img.size(0)
         device = obs_img.device
-        
+
         # 観測画像を3チャンネルずつ分割
         obs_img_split = torch.split(obs_img, 3, dim=1)
-        
+
         # 1. goal_encoder用の入力を準備
         last_obs = obs_img_split[-1]  # 最後の3チャンネル
-        obsgoal_img = torch.cat([last_obs, last_obs], dim=1)  # (B, 6, H, W)
         
+        # goal_maskをゼロに設定（ゴールがないことを示す）
+        goal_mask = torch.zeros(batch_size, 1, device=device)  # (B, 1)
+        
+        # goal_imgをゼロテンソルに設定（サイズをobs_imgに合わせる）
+        obsgoal_img = torch.zeros_like(last_obs)  # (B, 3, H, W)
+
         # 2. obs_encoder用の入力を準備
-        # 全ての観測画像を使用（最後の画像も含む）
         context_imgs = obs_img  # 元の形状のまま使用
-        
-        # 目標マスクを作成（常にマスク）
-        goal_mask = torch.ones(batch_size, 1, device=device)
-        
+
         # vision_encoderを通す
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
             obs_img=context_imgs,     # 全ての観測画像
-            goal_img=obsgoal_img,     # 6チャンネルの目標画像
+            goal_img=obsgoal_img,     # サイズを一致させたgoal_img
             input_goal_mask=goal_mask
         )
-        
+
         # Adapterを通す
         adapted_encoding = self.vision_adapter(obs_encoding)
-        
+
         # noise_pred_netを通す
         noise_pred = self.base_model.forward(
             func_name="noise_pred_net",
@@ -57,7 +58,7 @@ class NoMaDAdapter(nn.Module):
             timestep=timesteps,
             global_cond=adapted_encoding
         )
-        
+
         return noise_pred
     
     def get_adapter_parameters(self):
