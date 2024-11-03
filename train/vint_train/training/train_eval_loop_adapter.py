@@ -32,7 +32,7 @@ def train_eval_loop_nomad_adapter(
     alpha: float = 1e-4,
     use_wandb: bool = True,
     eval_fraction: float = 0.25,
-    eval_freq: int = 1,
+    eval_freq: int = 5,
     save_freq: int = 10,
 ):
     """Adapter層を使用したNOMADモデルの学習ループ"""
@@ -152,9 +152,12 @@ def train_eval_loop_nomad_adapter(
 
         # エポックの要約を出力
         print(f"\nEpoch {epoch} Summary:")
-        print(f"Train Loss: {current_train_loss:.6f}")
-        print(f"Test Loss: {current_test_loss:.6f}")
-        print(f"Best Test Loss: {best_test_loss:.6f}\n")
+        if current_train_loss is not None:
+            print(f"Train Loss: {current_train_loss:.6f}")
+        if current_test_loss is not None:
+            print(f"Test Loss: {current_test_loss:.6f}")
+            print(f"Best Test Loss: {best_test_loss:.6f}")
+        print()  # 空行を追加
 
     # 訓練終了時刻を記録
     end_time = time.time()
