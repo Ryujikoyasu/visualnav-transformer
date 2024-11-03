@@ -39,13 +39,13 @@ class NoMaDAdapter(nn.Module):
         # 2. 観測画像とゴール画像の準備
         context_imgs = obs_img.view(batch_size, -1, obs_img.size(3), obs_img.size(4))
         
-        # 3. obsgoal_imgの作成（nomad_vint.pyの期待する順序で結合）
-        obsgoal_img = torch.cat([current_obs, goal_image], dim=1)
+        # 3. obsgoal_imgの作成（goal_encoderの入力用）
+        obsgoal_img = torch.cat([goal_image, current_obs], dim=1)
         
         print(f"context_imgs shape: {context_imgs.shape}")
         print(f"obsgoal_img shape: {obsgoal_img.shape}")
         
-        # 4. vision_encoderを通す（nomad_vint.pyの期待する順序で渡す）
+        # 4. vision_encoderを通す
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
             obs_img=context_imgs,
