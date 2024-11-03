@@ -65,12 +65,17 @@ def train_eval_loop_nomad_adapter(
         dict: 訓練の結果を含む辞書
     """
     latest_path = os.path.join(project_folder, f"latest.pth")
-    adapter_params = [p for n, p in model.named_parameters() if 'adapter' in n]
+    
+    # EMAModelの初期化を修正
     ema_model = EMAModel(
         model=model,
-        power=0.75,
-        parameters=adapter_params
+        power=0.75
     )
+    
+    # Adapterパラメータ以外を更新しないようにする
+    for name, param in ema_model.averaged_model.named_parameters():
+        if 'adapter' not in name:
+            param.requires_grad = False
 
     # 訓練開始時刻を記録
     start_time = time.time()
