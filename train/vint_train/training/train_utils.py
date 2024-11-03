@@ -611,7 +611,6 @@ def train_nomad(
 
             # Generate random goal mask
             goal_mask = (torch.rand((B,)) < goal_mask_prob).long().to(device)
-            obsgoal_cond = model("vision_encoder", obs_img=batch_obs_images, goal_img=batch_goal_images, input_goal_mask=goal_mask)
             
             # Get distance label
             distance = distance.float().to(device)
@@ -1243,6 +1242,22 @@ class CustomEMA:
         for k, v in state_dict.items():
             if k in self.shadow:
                 self.shadow[k] = v.clone()
+
+    def restore(self, model: nn.Module):
+        """
+        モデルの重みを元に戻す（EMAの適用を解除する）。
+        
+        Args:
+            model (nn.Module): 重みを元に戻すモデル。
+        """
+        # 現在のモデルのパラメータを保持
+        original_params = {}
+        for name, param in model.named_parameters():
+            if self.param_names and name not in self.param_names:
+                continue
+            if name in self.shadow:
+                original_params[name] = param.data.clone()
+                param.data.copy_(self.shadow[name])
 
 
 def train_nomad_adapter(
