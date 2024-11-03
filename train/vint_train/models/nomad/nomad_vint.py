@@ -9,7 +9,7 @@ from vint_train.models.vint.self_attention import PositionalEncoding
 class NoMaD_ViNT(nn.Module):
     def __init__(
         self,
-        context_size: int = 5,
+        context_size: int,
         obs_encoder: Optional[str] = "efficientnet-b0",
         obs_encoding_size: Optional[int] = 512,
         mha_num_attention_heads: Optional[int] = 2,
@@ -18,6 +18,14 @@ class NoMaD_ViNT(nn.Module):
     ) -> None:
         """
         NoMaD ViNT Encoder class
+        
+        Args:
+            context_size: コンテキストとして使用する画像数（設定ファイルから指定される必須パラメータ）
+            obs_encoder: 観測エンコーダーの種類
+            obs_encoding_size: 観測エンコーディングのサイズ
+            mha_num_attention_heads: Multi-head Attentionのヘッド数
+            mha_num_attention_layers: Transformerレイヤーの数
+            mha_ff_dim_factor: Feed-forward層の拡大率
         """
         super().__init__()
         self.obs_encoding_size = obs_encoding_size
