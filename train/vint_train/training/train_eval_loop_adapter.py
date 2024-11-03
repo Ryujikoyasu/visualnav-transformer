@@ -39,7 +39,7 @@ def train_eval_loop_nomad_adapter(
     Adapter層を使用したNOMADモデルの学習ループ
     
     Args:
-        train_model (bool): 学習を実行��るかどうか
+        train_model (bool): 学習を実行るかどうか
         model (torch.nn.Module): NoMaDAdapterモデル
         optimizer (torch.optim.Optimizer): オプティマイザ
         lr_scheduler (torch.optim.lr_scheduler._LRScheduler): 学習率スケジューラ
@@ -92,25 +92,23 @@ def train_eval_loop_nomad_adapter(
                 # データの準備
                 images = batch['image'].to(device)  # (B, context_size*C, H, W)
                 goal_images = batch['goal_image'].to(device)  # (B, C, H, W)
-                
-                # 画像をチャネル方向に連結して6チャネルにする
-                obsgoal_images = torch.cat([images, goal_images], dim=1)  # (B, 6, H, W)
-                
                 noisy_twists = batch['twist'].to(device)
                 
-                # バッチサイズの確認
-                print(f"Debug - Batch shapes:")
-                print(f"obsgoal_images: {obsgoal_images.shape}")
-                print(f"noisy_twists: {noisy_twists.shape}")
+                # 形状の確認
+                print(f"Initial noisy_twists shape: {noisy_twists.shape}")
                 
-                timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (noisy_twists.shape[0],), device=device).long()
-                
-                # ノイズの追加とモデルの予測
+                # ノイズの追加
                 noise = torch.randn_like(noisy_twists)
                 noisy_twists = noise_scheduler.add_noise(noisy_twists, noise, timesteps)
                 
+                # ノイズ追加後の形状確認
+                print(f"noisy_twists shape after noise addition: {noisy_twists.shape}")
+                
                 # noisy_twistsのチャネル数を2に変換
-                noisy_twists = noisy_twists.view(noisy_twists.size(0), 2, -1)  # (B, 2, L)
+                noisy_twists = noisy_twists.view(noisy_twists.size(0), -1, 2)
+                
+                # モデルの予測前の形状確認
+                print(f"noisy_twists shape before model input: {noisy_twists.shape}")
                 
                 # モデルの予測
                 noise_pred = model(images, goal_images, noisy_twists, timesteps)
