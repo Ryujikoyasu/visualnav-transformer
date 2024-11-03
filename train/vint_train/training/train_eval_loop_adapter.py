@@ -100,7 +100,7 @@ def train_eval_loop_nomad_adapter(
             for dataset_type, test_loader in test_dataloaders.items():
                 print(f"Start {dataset_type} Testing Epoch {epoch}/{current_epoch + epochs - 1}")
                 model.eval()
-                evaluate_nomad(
+                evaluate_nomad_adapter(
                     eval_type=dataset_type,
                     ema_model=ema_model,  # evaluate_nomadでカスタムEMAを使用
                     dataloader=test_loader,
