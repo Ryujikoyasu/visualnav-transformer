@@ -85,6 +85,9 @@ class TwistDataset(Dataset):
                              start_idx + self.context_size + self.len_traj_pred)
         twist_data = [traj_data['normalized_twists'][i] for i in twist_indices]
         
+        # linear.xとangular.zのみを抽出
+        twist_data = [(twist[0], twist[5]) for twist in twist_data]  # (linear.x, angular.z)
+        
         return {
             'image': context_images,  # (context_size*C, H, W)
             'goal_image': goal_image,  # (C, H, W)

@@ -39,7 +39,7 @@ def train_eval_loop_nomad_adapter(
     Adapter層を使用したNOMADモデルの学習ループ
     
     Args:
-        train_model (bool): 学習を実行するかどうか
+        train_model (bool): 学習を実行��るかどうか
         model (torch.nn.Module): NoMaDAdapterモデル
         optimizer (torch.optim.Optimizer): オプティマイザ
         lr_scheduler (torch.optim.lr_scheduler._LRScheduler): 学習率スケジューラ
@@ -109,7 +109,10 @@ def train_eval_loop_nomad_adapter(
                 noise = torch.randn_like(noisy_twists)
                 noisy_twists = noise_scheduler.add_noise(noisy_twists, noise, timesteps)
                 
-                # モデルの予測（ゴール情報なし）
+                # noisy_twistsのチャネル数を2に変換
+                noisy_twists = noisy_twists.view(noisy_twists.size(0), 2, -1)  # (B, 2, L)
+                
+                # モデルの予測
                 noise_pred = model(images, goal_images, noisy_twists, timesteps)
                 
                 # 損失の計算
