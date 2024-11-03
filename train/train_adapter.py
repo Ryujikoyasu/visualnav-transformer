@@ -211,19 +211,6 @@ if __name__ == "__main__":
     if "defaults" in config:
         del config["defaults"]  # defaultsキーを削除（既にマージ済みのため）
     
-    # バッチサイズなどの重要なパラメータが正しく上書きされていることを確認
-    # print("\nKey Configuration Values:")
-    # important_keys = [
-    #     "batch_size", "num_workers", "lr", "optimizer", 
-    #     "num_epochs", "eval_freq", "model_type"
-    # ]
-    # for key in important_keys:
-    #     print(f"{key}: {config.get(key)}")
-    
-    # print("\nFull Merged Config:")
-    # for key, value in config.items():
-    #     print(f"{key}: {value}")
-    
     # dictに変換
     config = OmegaConf.to_container(config, resolve=True)
     

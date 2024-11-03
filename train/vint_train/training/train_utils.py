@@ -1199,7 +1199,7 @@ class CustomEMA:
 
     def step(self, model: nn.Module):
         """
-        EMAを更��する。
+        EMAを更する。
 
         Args:
             model (nn.Module): パラメータを更新するモデル。
@@ -1263,7 +1263,7 @@ def train_nomad_adapter(
     num_images_log: int = 8,
     use_wandb: bool = True,
 ):
-    """Adapter層のみを学習するNOMADの学習���数"""
+    """Adapter層のみを学習するNOMADの学習数"""
     model.train()
     num_batches = len(dataloader)
 
@@ -1338,19 +1338,81 @@ def evaluate_nomad_adapter(
     eval_fraction: float = 0.25,
     use_wandb: bool = True,
 ):
-    """評価用関数（NOMAD用）"""
-    model.eval()  # modelをeval modeに
+    """評価用関数（Adapter用）- no goalのみで評価"""
+    model.eval()
+    num_batches = len(dataloader)
     
-    # 評価中はEMAの重みを使用
+    # ロガーの設定
+    loss_logger = Logger("adapter_eval_loss", eval_type, window_size=print_log_freq)
+    loggers = {"adapter_eval_loss": loss_logger}
+
+    num_batches = max(int(num_batches * eval_fraction), 1)
+
     with torch.no_grad():
         # EMAの重みを一時的に適用
         ema_model.apply_shadow(model)
-        
-        # 評価ロジック
-        # ... 既存の評価ロジック ...
-        
-        # 評価後にモデルの重みを元に戻す（必要に応じて）
-        # ema_model.restore(model)  # もし必要なら
+
+        with tqdm.tqdm(
+            itertools.islice(dataloader, num_batches), 
+            total=num_batches, 
+            dynamic_ncols=True, 
+            desc=f"Evaluating {eval_type} for epoch {epoch}", 
+            leave=False) as tepoch:
+            
+            for i, data in enumerate(tepoch):
+                # データの準備
+                obs_image = data['image'].to(device)
+                goal_image = data['goal_image'].to(device)
+                twists = data['twist'].to(device)
+                
+                B = twists.shape[0]
+
+                # ノイズの追加
+                noise = torch.randn_like(twists)
+                timesteps = torch.randint(
+                    0, noise_scheduler.config.num_train_timesteps,
+                    (B,), device=device
+                ).long()
+                noisy_twists = noise_scheduler.add_noise(twists, noise, timesteps)
+
+                # no goalでの予測
+                noise_pred = model(obs_image, goal_image, noisy_twists, timesteps)
+                loss = F.mse_loss(noise_pred, noise)
+
+                # ロギング
+                loss_cpu = loss.item()
+                tepoch.set_postfix(loss=loss_cpu)
+
+                if use_wandb:
+                    wandb.log({f"{eval_type}/adapter_loss": loss_cpu})
+
+                if i % print_log_freq == 0:
+                    logger = loggers["adapter_eval_loss"]
+                    logger.log_data(loss_cpu)
+                    print(f"(epoch {epoch}) (batch {i}/{num_batches - 1}) {logger.display()}")
+
+                if image_log_freq != 0 and i % image_log_freq == 0:
+                    visualize_diffusion_action_distribution(
+                        model,
+                        noise_scheduler,
+                        obs_image,
+                        goal_image,
+                        batch_viz_obs_images,
+                        batch_viz_goal_images,
+                        twists,
+                        distance,
+                        goal_pos,
+                        device,
+                        eval_type,
+                        project_folder,
+                        epoch,
+                        num_images_log,
+                        30,
+                        use_wandb,
+                    )
+
+        # 評価後にモデルの重みを元に戻す
+        ema_model.restore(model)
 
 
 # normalize data

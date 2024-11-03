@@ -8,7 +8,7 @@ from torch.optim import Adam
 from torchvision import transforms
 import time
 
-from .train_utils import train_nomad_adapter, evaluate_nomad_adapter, CustomEMA
+from train_utils import train_nomad_adapter, evaluate_nomad_adapter, CustomEMA
 
 def train_eval_loop_nomad_adapter(
     train_model: bool,
