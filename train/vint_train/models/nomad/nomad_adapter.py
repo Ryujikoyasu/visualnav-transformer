@@ -32,26 +32,24 @@ class NoMaDAdapter(nn.Module):
         device = obs_img.device
         
         # 1. 観測画像の準備
-        context_size = obs_img.size(1) // 3  # チャンネル数から context_size を計算
-        obs_img = obs_img.view(batch_size, context_size, 3, obs_img.size(2), obs_img.size(3))  # (B, context_size, 3, H, W)
-        current_obs = obs_img[:, -1]  # 最後の観測画像を取得 (B, 3, H, W)
+        context_size = obs_img.size(1) // 3
+        obs_img = obs_img.view(batch_size, context_size, 3, obs_img.size(2), obs_img.size(3))
+        current_obs = obs_img[:, -1]
         
-        print(f"context_size: {context_size}")
-        print(f"current_obs shape: {current_obs.shape}")
+        # 2. 観測画像とゴール画像の準備
+        context_imgs = obs_img.view(batch_size, -1, obs_img.size(3), obs_img.size(4))
         
-        # 2. obsgoal_imgの作成
-        obsgoal_img = torch.cat([current_obs, goal_image], dim=1)  # (B, 6, H, W)
+        # 3. obsgoal_imgの作成（nomad_vint.pyの期待する順序で結合）
+        obsgoal_img = torch.cat([current_obs, goal_image], dim=1)
+        
+        print(f"context_imgs shape: {context_imgs.shape}")
         print(f"obsgoal_img shape: {obsgoal_img.shape}")
         
-        # 3. 観測画像を元の形状に戻す
-        context_imgs = obs_img[:, :-1]  # 最後の画像を除外
-        context_imgs = context_imgs.reshape(batch_size, -1, obs_img.size(3), obs_img.size(4))  # (B, (context_size-1)*3, H, W)
-        
-        # 4. vision_encoderを通す
+        # 4. vision_encoderを通す（nomad_vint.pyの期待する順序で渡す）
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
-            obs_img=context_imgs,  # 最後の画像を除いたコンテキスト画像
-            goal_img=obsgoal_img,  # 6チャンネルの目標画像
+            obs_img=context_imgs,
+            goal_img=obsgoal_img,
             input_goal_mask=torch.ones(batch_size, 1, device=device)
         )
         print(f"obs_encoding shape: {obs_encoding.shape}")
