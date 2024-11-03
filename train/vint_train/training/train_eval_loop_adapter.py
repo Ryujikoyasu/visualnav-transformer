@@ -91,6 +91,7 @@ def train_eval_loop_nomad_adapter(
                 
                 # データの準備
                 images = batch['image'].to(device)  # (B, context_size*C, H, W)
+                print(f"Debug - train_eval_loop_nomad_adapter - images shape: {images.shape}")  # デバッグ出力
                 goal_images = batch['goal_image'].to(device)  # (B, C, H, W)
                 noisy_twists = batch['twist'].to(device)
                 
