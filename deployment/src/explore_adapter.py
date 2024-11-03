@@ -84,7 +84,7 @@ class ExplorationAdapter(Node):
         # アダプターモデルの初期化
         self.model = NoMaDAdapter(
             base_model=base_model,
-            adapter_bottleneck_dim=self.model_params["adapter_bottleneck_dim"]
+            adapter_bottleneck_dim=self.model_params["adapter"]["bottleneck_dim"]
         ).to(device)
 
         # 複数のアダプターの読み込み
