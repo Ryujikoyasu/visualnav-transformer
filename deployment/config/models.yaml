@@ -17,7 +17,6 @@ nomad:
 nomad_adapter:  # nomad_adapterの設定を追加
   config_path: "../../train/config/nomad_adapter.yaml"
   ckpt_path: "../../deployment/model_weights/nomad.pth"  # ベースモデルのパス
-  adapter_paths:
   adapter_path:
     task1: "/ssd/source/navigation/visualnav-transformer/train/experiments/nomad_adapter/nomad_adapter_exe/adapter_29_20241103_231907.pth"
     # task2: "/ssd/source/navigation/visualnav-transformer/train/experiments/nomad_adapter/nomad_adapter_exe/adapter_epoch_timestamp.pth"

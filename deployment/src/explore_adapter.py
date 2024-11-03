@@ -88,7 +88,7 @@ class ExplorationAdapter(Node):
         ).to(device)
 
         # 複数のアダプターの読み込み
-        for task_name, adapter_path in model_paths[self.args.model]["adapter_paths"].items():
+        for task_name, adapter_path in model_paths[self.args.model]["adapter_path"].items():
             if os.path.exists(adapter_path):
                 self.get_logger().info(f"Loading adapter for task {task_name} from {adapter_path}")
                 adapter_state = torch.load(adapter_path)
