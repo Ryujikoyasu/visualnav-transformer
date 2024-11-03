@@ -93,15 +93,17 @@ def train_eval_loop_nomad_adapter(
             torch.save(model.state_dict(), latest_path)
 
             # EMAモデルの保存
-            numbered_path = os.path.join(project_folder, f"ema_{epoch}.pth")
+            timestamp = time.strftime('%Y%m%d_%H%M%S')
+            numbered_path = os.path.join(project_folder, f"ema_{epoch}_{timestamp}.pth")
             torch.save(ema_model.state_dict(), numbered_path)
             print(f"Saved EMA model to {numbered_path}")
 
-            # オプティマイザとスケジューラの保存
-            optimizer_path = os.path.join(project_folder, f"optimizer_{epoch}.pth")
+            # オプティマイザの保存
+            optimizer_path = os.path.join(project_folder, f"optimizer_{epoch}_{timestamp}.pth")
             torch.save(optimizer.state_dict(), optimizer_path)
             
-            scheduler_path = os.path.join(project_folder, f"scheduler_{epoch}.pth")
+            # スケジューラの保存
+            scheduler_path = os.path.join(project_folder, f"scheduler_{epoch}_{timestamp}.pth")
             if lr_scheduler:
                 torch.save(lr_scheduler.state_dict(), scheduler_path)
 
@@ -111,7 +113,7 @@ def train_eval_loop_nomad_adapter(
                 for name, param in model.named_modules() 
                 if isinstance(param, AdapterLayer)
             }
-            adapter_path = os.path.join(project_folder, f"adapter_{epoch}.pth")
+            adapter_path = os.path.join(project_folder, f"adapter_{epoch}_{timestamp}.pth")
             torch.save(adapter_state_dict, adapter_path)
             print(f"Saved checkpoint at epoch {epoch}")
 
