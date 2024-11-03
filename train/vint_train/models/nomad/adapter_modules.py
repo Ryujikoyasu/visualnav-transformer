@@ -32,7 +32,9 @@ class AdapterTransformerBlock(nn.Module):
         self.norm1 = base_transformer_block.norm1
         self.norm2 = base_transformer_block.norm2
         self.dropout = base_transformer_block.dropout
-        self.mlp = base_transformer_block.mlp
+        self.linear1 = base_transformer_block.linear1  # mlp → linear1
+        self.linear2 = base_transformer_block.linear2  # mlp → linear2
+        self.activation = base_transformer_block.activation  # 活性化関数も継承
         self.batch_first = base_transformer_block.self_attn.batch_first
         
         # Adapter層の追加
@@ -58,8 +60,9 @@ class AdapterTransformerBlock(nn.Module):
         # FFN + Adapter2
         residual = x
         x = self.norm2(x)
-        x = self.mlp(x)
+        # FFNの実装を修正
+        x = self.linear2(self.dropout(self.activation(self.linear1(x))))
         x = self.dropout(x)
         x = self.adapter2(x)
         x = x + residual
-        return x 
+        return x
