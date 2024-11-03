@@ -13,6 +13,11 @@
 nomad: 
   config_path: "../../train/config/nomad.yaml"
   ckpt_path: "../../deployment/model_weights/nomad.pth"
+  adapter_path:
+    task1: "/ssd/source/navigation/visualnav-transformer/train/experiments/nomad_adapter/nomad_adapter_exe/adapter_29_20241103_231907.pth"
+    # task2: "/ssd/source/navigation/visualnav-transformer/train/experiments/nomad_adapter/nomad_adapter_exe/adapter_epoch_timestamp.pth"
+    # task3: "/ssd/source/navigation/visualnav-transformer/train/experiments/nomad_adapter/nomad_adapter_exe/adapter_epoch_timestamp.pth" 
+  
 
 
 # add your own model configs here after saving the *.pth file to ../model_weight

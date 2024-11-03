@@ -36,6 +36,8 @@ def train_eval_loop_nomad_adapter(
     save_freq: int = 10,
 ):
     """Adapter層を使用したNOMADモデルの学習ループ"""
+    # 実行時の日時を取得（一度だけ）
+    timestamp = time.strftime('%Y%m%d_%H%M%S')
     latest_path = os.path.join(project_folder, f"latest.pth")
     
     # Adapterのパラメータ名を取得
@@ -93,7 +95,6 @@ def train_eval_loop_nomad_adapter(
             torch.save(model.state_dict(), latest_path)
 
             # EMAモデルの保存
-            timestamp = time.strftime('%Y%m%d_%H%M%S')
             numbered_path = os.path.join(project_folder, f"ema_{epoch}_{timestamp}.pth")
             torch.save(ema_model.state_dict(), numbered_path)
             print(f"Saved EMA model to {numbered_path}")
