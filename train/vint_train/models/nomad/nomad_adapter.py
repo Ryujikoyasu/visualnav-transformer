@@ -21,6 +21,10 @@ class NoMaDAdapter(nn.Module):
         for name, param in self.base_model.named_parameters():
             if 'adapter' not in name:
                 param.requires_grad = False
+
+    def get_adapter_parameters(self):
+        """Adapterのパラメータのみを返す"""
+        return (param for name, param in self.named_parameters() if 'adapter' in name)
                 
     def forward(self, obs_img, goal_image, noisy_actions, timesteps):
         print("\n=== NoMaDAdapter Forward Pass Debug ===")
