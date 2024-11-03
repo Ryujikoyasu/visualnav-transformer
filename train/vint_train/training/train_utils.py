@@ -1033,7 +1033,6 @@ def model_output(
         'gc_distance': gc_distance,
     }
 
-
 def visualize_diffusion_action_distribution(
     ema_model: nn.Module,
     noise_scheduler: DDPMScheduler,
@@ -1215,7 +1214,7 @@ class CustomEMA:
         モデルにEMAの重みを適用する。
 
         Args:
-            model (nn.Module): 重みを適用するモデル。
+            model (nn.Module): ��みを適用するモデル。
         """
         for name, param in model.named_parameters():
             if self.param_names and name not in self.param_names:
@@ -1225,7 +1224,7 @@ class CustomEMA:
 
     def state_dict(self) -> Dict[str, torch.Tensor]:
         """
-        EMA���状態を辞書として取得する。
+        EMA状態を辞書として取得する。
 
         Returns:
             Dict[str, torch.Tensor]: EMA状態。
@@ -1329,7 +1328,7 @@ def train_nomad_adapter(
             tepoch.set_postfix(loss=loss_cpu)
             
             if use_wandb:
-                wandb.log({"adapter_loss": loss_cpu})
+                wandb.log({"total_loss": loss_cpu})
 
             if i % print_log_freq == 0:
                 logger = loggers["adapter_loss"]
@@ -1425,10 +1424,10 @@ def evaluate_nomad_adapter(
 
                 if image_log_freq != 0 and i % image_log_freq == 0:
                     # 可視化用のダミーデータを作成
-                    dummy_distance = torch.zeros(B).to(device)  # 距離を0として可視化
-                    dummy_goal_pos = torch.zeros(B, 2).to(device)  # 原点を目標置として可視化
+                    dummy_distance = torch.zeros(B).to(device)
+                    dummy_goal_pos = torch.zeros(B, 2).to(device)
                     
-                    visualize_diffusion_action_distribution(
+                    visualize_diffusion_action_distribution_adapter(
                         model,
                         noise_scheduler,
                         obs_image,
@@ -1436,8 +1435,8 @@ def evaluate_nomad_adapter(
                         batch_viz_obs_images,
                         batch_viz_goal_images,
                         twists,
-                        dummy_distance,  # ダミーデータを使用
-                        dummy_goal_pos,  # ダミーデータを使用
+                        dummy_distance,
+                        dummy_goal_pos,
                         device,
                         eval_type,
                         project_folder,
@@ -1453,30 +1452,51 @@ def evaluate_nomad_adapter(
     return total_loss / processed_batches
 
 
-def model_output_adapter(
+def visualize_diffusion_action_distribution_adapter(
     model: nn.Module,
     noise_scheduler: DDPMScheduler,
-    batch_obs_images: torch.Tensor,
-    batch_goal_images: torch.Tensor,
-    pred_horizon: int,
-    action_dim: int,
-    num_samples: int,
+    obs_image: torch.Tensor,
+    goal_image: torch.Tensor,
+    batch_viz_obs_images: torch.Tensor,
+    batch_viz_goal_images: torch.Tensor,
+    twists: torch.Tensor,
+    dummy_distance: torch.Tensor,
+    dummy_goal_pos: torch.Tensor,
     device: torch.device,
+    eval_type: str,
+    project_folder: str,
+    epoch: int,
+    num_images_log: int,
+    num_samples: int = 30,
+    use_wandb: bool = True,
 ):
-    """NoMaDAdapter用のmodel_output関数"""
-    B = batch_obs_images.shape[0] * num_samples
-    
+    """アダプター用の可視化関数"""
+    visualize_path = os.path.join(
+        project_folder,
+        "visualize",
+        eval_type,
+        f"epoch{epoch}",
+        "action_sampling_prediction",
+    )
+    if not os.path.isdir(visualize_path):
+        os.makedirs(visualize_path)
+
+    B = obs_image.shape[0]
+    pred_horizon = twists.shape[1]
+    action_dim = twists.shape[2]
+
     # 入力の複製
-    obs_images = batch_obs_images.repeat_interleave(num_samples, dim=0)
-    goal_images = batch_goal_images.repeat_interleave(num_samples, dim=0)
+    obs_images = obs_image.repeat_interleave(num_samples, dim=0)
+    goal_images = goal_image.repeat_interleave(num_samples, dim=0)
 
     # ノイズの初期化
     noisy_actions = torch.randn(
-        (B, pred_horizon, action_dim), device=device)
+        (B * num_samples, pred_horizon, action_dim), device=device)
 
     # ノイズ除去ステップ
+    actions_list = []
     for k in noise_scheduler.timesteps[:]:
-        timesteps = k.unsqueeze(-1).repeat(B).to(device)
+        timesteps = k.unsqueeze(-1).repeat(B * num_samples).to(device)
         
         # ノイズ予測
         noise_pred = model(obs_images, goal_images, noisy_actions, timesteps)
@@ -1490,8 +1510,63 @@ def model_output_adapter(
 
     # アクションの取得
     actions = get_action(noisy_actions, ACTION_STATS)
-
-    return {
-        'actions': actions,
-        'distance': None  # distanceは使用しない
-    }
+    actions_list = np.split(to_numpy(actions), num_images_log, axis=0)
+    
+    wandb_list = []
+    
+    # 各サンプルについて可視化
+    for i in range(min(num_images_log, B)):
+        fig, ax = plt.subplots(1, 3, figsize=(18.5, 10.5))
+        
+        # 予測された軌道とグラウンドトルースの可視化
+        traj_list = np.concatenate([
+            actions_list[i],  # 予測された軌道
+            to_numpy(twists[i:i+1])  # グラウンドトルース
+        ], axis=0)
+        
+        # 軌道の色とアルファ値の設定
+        traj_colors = ["red"] * num_samples + ["magenta"]  # 予測は赤、GTはマゼンタ
+        traj_alphas = [0.1] * num_samples + [1.0]  # 予測は透明度高め、GTは不透明
+        
+        # 点の設定（原点のみ）
+        point_list = [np.array([0, 0])]
+        point_colors = ["green"]
+        point_alphas = [1.0]
+        
+        # 軌道と点のプロット
+        plot_trajs_and_points(
+            ax[0],
+            traj_list,
+            point_list,
+            traj_colors,
+            point_colors,
+            traj_labels=None,
+            point_labels=None,
+            quiver_freq=0,
+            traj_alphas=traj_alphas,
+            point_alphas=point_alphas,
+        )
+        
+        # 観測画像とゴール画像の表示
+        obs_image = to_numpy(batch_viz_obs_images[i])
+        goal_image = to_numpy(batch_viz_goal_images[i])
+        obs_image = np.moveaxis(obs_image, 0, -1)
+        goal_image = np.moveaxis(goal_image, 0, -1)
+        ax[1].imshow(obs_image)
+        ax[2].imshow(goal_image)
+        
+        # タイトルの設定
+        ax[0].set_title(f"Predicted trajectories (red) vs Ground truth (magenta)")
+        ax[1].set_title(f"Observation")
+        ax[2].set_title(f"Goal image")
+        
+        # 保存とWandBへのログ
+        save_path = os.path.join(visualize_path, f"sample_{i}.png")
+        plt.savefig(save_path)
+        if use_wandb:
+            wandb_list.append(wandb.Image(save_path))
+        plt.close(fig)
+    
+    # WandBへの一括ログ
+    if len(wandb_list) > 0 and use_wandb:
+        wandb.log({f"{eval_type}_action_samples": wandb_list}, commit=False)

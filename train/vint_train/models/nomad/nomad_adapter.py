@@ -38,11 +38,11 @@ class NoMaDAdapter(nn.Module):
         self.load_state_dict(current_state)
 
     def forward(self, obs_img, goal_image, noisy_actions, timesteps):
-        # print("\n=== NoMaDAdapter Forward Pass Debug ===")
-        # print(f"Input shapes:")
-        # print(f"obs_img: {obs_img.shape}")
-        # print(f"goal_image: {goal_image.shape}")
-        # print(f"noisy_actions: {noisy_actions.shape}")
+        print("\n=== NoMaDAdapter Forward Pass Debug ===")
+        print(f"Input shapes:")
+        print(f"obs_img: {obs_img.shape}")
+        print(f"goal_image: {goal_image.shape}")
+        print(f"noisy_actions: {noisy_actions.shape}")
         
         batch_size = obs_img.size(0)
         device = obs_img.device
