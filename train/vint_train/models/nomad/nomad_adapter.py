@@ -36,29 +36,20 @@ class NoMaDAdapter(nn.Module):
         obs_img = obs_img.view(batch_size, context_size, 3, obs_img.size(2), obs_img.size(3))
         current_obs = obs_img[:, -1]
         
-        # 2. 観測画像とゴール画像の準備
-        context_imgs = obs_img.view(batch_size, -1, obs_img.size(3), obs_img.size(4))
-        
-        # 3. obsgoal_imgの作成（goal_encoderの入力用）
-        obsgoal_img = torch.cat([goal_image, current_obs], dim=1)
-        
-        print(f"context_imgs shape: {context_imgs.shape}")
-        print(f"obsgoal_img shape: {obsgoal_img.shape}")
-        
-        # 4. vision_encoderを通す
+        # 2. vision_encoderを通す
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
-            obs_img=context_imgs,
-            goal_img=obsgoal_img,
+            obs_img=obs_img.view(batch_size, -1, obs_img.size(3), obs_img.size(4)),
+            goal_img=goal_image,
             input_goal_mask=torch.ones(batch_size, 1, device=device)
         )
         print(f"obs_encoding shape: {obs_encoding.shape}")
         
-        # 5. Adapterを通す
+        # 3. Adapterを通す
         adapted_encoding = self.vision_adapter(obs_encoding)
         print(f"adapted_encoding shape: {adapted_encoding.shape}")
         
-        # 6. noise_pred_netを通す
+        # 4. noise_pred_netを通す
         noise_pred = self.base_model.forward(
             func_name="noise_pred_net",
             sample=noisy_actions,
