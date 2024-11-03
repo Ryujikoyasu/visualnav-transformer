@@ -2,6 +2,7 @@ import argparse
 import os
 import rclpy
 import cv2
+import pygame
 from datetime import datetime
 
 from rclpy.node import Node
@@ -52,7 +53,73 @@ class DataCollector(Node):
         
         self.get_logger().info(f'Data collector initialized. Saving to {self.save_dir}')
         
+        # Pygameの初期化
+        os.environ["SDL_VIDEODRIVER"] = "dummy"
+        pygame.init()
+        pygame.joystick.init()
+        
+        # Joy-Conの初期化
+        self.joystick = None
+        for i in range(pygame.joystick.get_count()):
+            joy = pygame.joystick.Joystick(i)
+            joy.init()
+            if "Joy-Con" in joy.get_name():
+                self.joystick = joy
+                self.get_logger().info(f'Joy-Con が見つかりました: {joy.get_name()}')
+                break
+        
+        if self.joystick is None:
+            self.get_logger().error('Joy-Con が見つかりません')
+            raise RuntimeError('Joy-Con が見つかりません')
+
+        # ボタン設定
+        self.button_a = 2
+        self.button_b = 1
+        
+        # 状態管理
+        self.is_recording = False
+        self.last_button_state = None  # チャタリング防止用
+        
+        # タイマーの追加（ボタン状態チェック用）
+        self.create_timer(0.1, self.check_buttons)
+        
+    def check_buttons(self):
+        for event in pygame.event.get():
+            if event.type == pygame.JOYBUTTONDOWN:
+                current_state = 'A' if event.button == self.button_a else 'B' if event.button == self.button_b else None
+                
+                if current_state and current_state != self.last_button_state:
+                    if current_state == 'A' and self.last_button_state == 'B':
+                        self.stop_recording()
+                    elif current_state == 'B' and self.last_button_state == 'A':
+                        self.start_recording()
+                    
+                    self.last_button_state = current_state
+
+    def start_recording(self):
+        if not self.is_recording:
+            self.is_recording = True
+            self.get_logger().info('データの記録を開始します')
+            
+            # 新しいディレクトリの作成
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            self.save_dir = os.path.join(self.base_save_dir, f'traj_{timestamp}')
+            os.makedirs(self.save_dir, exist_ok=True)
+            os.makedirs(os.path.join(self.save_dir, 'images'), exist_ok=True)
+            os.makedirs(os.path.join(self.save_dir, 'twists'), exist_ok=True)
+            
+            self.frame_count = 0
+            self.last_save_time = None
+
+    def stop_recording(self):
+        if self.is_recording:
+            self.is_recording = False
+            self.get_logger().info(f'データの記録を終了します。保存フレーム数: {self.frame_count}')
+
     def sync_callback(self, image_msg, twist_msg):
+        if not self.is_recording:
+            return
+            
         try:
             current_time = datetime.now()
             
@@ -91,6 +158,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
+        pygame.quit()
         node.destroy_node()
         rclpy.shutdown()
 
