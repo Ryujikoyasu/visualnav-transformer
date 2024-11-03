@@ -26,12 +26,23 @@ class NoMaDAdapter(nn.Module):
         """Adapterのパラメータのみを返す"""
         return (param for name, param in self.named_parameters() if 'adapter' in name)
                 
+    def load_adapter(self, adapter_path):
+        """特定のアダプターをロード"""
+        adapter_state_dict = torch.load(adapter_path)
+        
+        # 現在のアダプターのパラメータのみを更新
+        current_state = self.state_dict()
+        for k, v in adapter_state_dict.items():
+            if 'adapter' in k:
+                current_state[k] = v
+        self.load_state_dict(current_state)
+
     def forward(self, obs_img, goal_image, noisy_actions, timesteps):
-        print("\n=== NoMaDAdapter Forward Pass Debug ===")
-        print(f"Input shapes:")
-        print(f"obs_img: {obs_img.shape}")
-        print(f"goal_image: {goal_image.shape}")
-        print(f"noisy_actions: {noisy_actions.shape}")
+        # print("\n=== NoMaDAdapter Forward Pass Debug ===")
+        # print(f"Input shapes:")
+        # print(f"obs_img: {obs_img.shape}")
+        # print(f"goal_image: {goal_image.shape}")
+        # print(f"noisy_actions: {noisy_actions.shape}")
         
         batch_size = obs_img.size(0)
         device = obs_img.device
@@ -70,3 +81,4 @@ class NoMaDAdapter(nn.Module):
         print("===================================\n")
         
         return noise_pred
+    

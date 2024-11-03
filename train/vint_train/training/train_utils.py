@@ -1271,6 +1271,9 @@ def train_nomad_adapter(
     loss_logger = Logger("adapter_loss", "train", window_size=print_log_freq)
     loggers = {"adapter_loss": loss_logger}
 
+    total_loss = 0.0
+    num_batches = 0
+
     with tqdm.tqdm(dataloader, desc="Train Batch", leave=False) as tepoch:
         for i, data in enumerate(tepoch):
             # データの準備
@@ -1295,6 +1298,8 @@ def train_nomad_adapter(
 
             # 損失の計算
             loss = F.mse_loss(noise_pred, noise)
+            total_loss += loss.item()
+            num_batches += 1
 
             # 最適化
             optimizer.zero_grad()
@@ -1318,6 +1323,8 @@ def train_nomad_adapter(
 
             if use_wandb and i % wandb_log_freq == 0:
                 wandb.log({"train/adapter_loss": loss_cpu}, commit=True)
+
+    return total_loss / num_batches
 
 
 def evaluate_nomad_adapter(
@@ -1347,6 +1354,9 @@ def evaluate_nomad_adapter(
     loggers = {"adapter_eval_loss": loss_logger}
 
     num_batches = max(int(num_batches * eval_fraction), 1)
+
+    total_loss = 0.0
+    num_batches = 0
 
     with torch.no_grad():
         # EMAの重みを一時的に適用
@@ -1378,6 +1388,8 @@ def evaluate_nomad_adapter(
                 # no goalでの予測
                 noise_pred = model(obs_image, goal_image, noisy_twists, timesteps)
                 loss = F.mse_loss(noise_pred, noise)
+                total_loss += loss.item()
+                num_batches += 1
 
                 # ロギング
                 loss_cpu = loss.item()
@@ -1414,7 +1426,7 @@ def evaluate_nomad_adapter(
         # 評価後にモデルの重みを元に戻す
         ema_model.restore(model)
 
-
+    return total_loss / num_batches
 # normalize data
 def get_data_stats(data):
     data = data.reshape(-1,data.shape[-1])
