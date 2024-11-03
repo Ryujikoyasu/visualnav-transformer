@@ -34,8 +34,8 @@ def main(config):
     train_dataset = TwistDataset(
         data_dir=config["datasets"]["twist_data"]["train"],
         transform=transform,
-        context_size=config["context_size"],  # 設定ファイルから取得
-        len_traj_pred=config["len_traj_pred"]  # 設定ファイルから取得
+        context_size=config["context_size"],  # 設定ファイルから値を渡す
+        len_traj_pred=config["len_traj_pred"]  # 設定ファイルから値を渡す
     )
     
     train_loader = DataLoader(
@@ -48,7 +48,9 @@ def main(config):
     
     test_dataset = TwistDataset(
         data_dir=config["datasets"]["twist_data"]["test"],
-        transform=transform
+        transform=transform,
+        context_size=config["context_size"],  # 設定ファイルから値を渡す
+        len_traj_pred=config["len_traj_pred"]  # 設定ファイルから値を渡す
     )
     
     test_loader = DataLoader(

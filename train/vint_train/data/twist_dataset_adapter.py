@@ -7,13 +7,13 @@ import glob
 from typing import Dict, List
 
 class TwistDataset(Dataset):
-    def __init__(self, data_dir: str, transform=None, context_size: int = 5, len_traj_pred: int = 8):
+    def __init__(self, data_dir: str, context_size: int, len_traj_pred: int, transform=None):
         """
         Args:
             data_dir: processed_data/train または processed_data/test へのパス
+            context_size: コンテキストとして使用する画像数（設定ファイルから指定）
+            len_traj_pred: 予測するTwistの数（設定ファイルから指定）
             transform: 画像の前処理
-            context_size: コンテキストとして使用する画像数
-            len_traj_pred: 予測するTwistの数
         """
         self.transform = transform
         self.context_size = context_size
