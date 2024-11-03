@@ -8,6 +8,7 @@ from torch.optim import Adam
 from torchvision import transforms
 from diffusers.training_utils import EMAModel
 import time
+import copy
 
 from .train_utils import train_nomad_adapter, evaluate_nomad
 
@@ -40,12 +41,11 @@ def train_eval_loop_nomad_adapter(
     # Adapterのパラメータを取得
     adapter_params = [p for n, p in model.named_parameters() if 'adapter' in n]
     
-    # EMAModelの初期化
-    ema_model = EMAModel(
-        model=model,
-        power=0.75,
-        parameters=adapter_params
-    )
+    # EMAModelの初期化を修正
+    ema_model = copy.deepcopy(model)  # モデルのコピーを作成
+    for name, param in ema_model.named_parameters():
+        if 'adapter' not in name:
+            param.requires_grad = False  # Adapter以外のパラメータを凍結
 
     # 訓練開始時刻を記録
     start_time = time.time()
