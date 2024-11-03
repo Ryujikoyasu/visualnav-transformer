@@ -1225,10 +1225,10 @@ class CustomEMA:
 
     def state_dict(self) -> Dict[str, torch.Tensor]:
         """
-        EMAの状態を辞書として取得する。
+        EMA���状態を辞書として取得する。
 
         Returns:
-            Dict[str, torch.Tensor]: EMA��状態。
+            Dict[str, torch.Tensor]: EMA状態。
         """
         return {k: v.clone() for k, v in self.shadow.items()}
 
@@ -1451,3 +1451,47 @@ def evaluate_nomad_adapter(
         ema_model.restore(model)
 
     return total_loss / processed_batches
+
+
+def model_output_adapter(
+    model: nn.Module,
+    noise_scheduler: DDPMScheduler,
+    batch_obs_images: torch.Tensor,
+    batch_goal_images: torch.Tensor,
+    pred_horizon: int,
+    action_dim: int,
+    num_samples: int,
+    device: torch.device,
+):
+    """NoMaDAdapter用のmodel_output関数"""
+    B = batch_obs_images.shape[0] * num_samples
+    
+    # 入力の複製
+    obs_images = batch_obs_images.repeat_interleave(num_samples, dim=0)
+    goal_images = batch_goal_images.repeat_interleave(num_samples, dim=0)
+
+    # ノイズの初期化
+    noisy_actions = torch.randn(
+        (B, pred_horizon, action_dim), device=device)
+
+    # ノイズ除去ステップ
+    for k in noise_scheduler.timesteps[:]:
+        timesteps = k.unsqueeze(-1).repeat(B).to(device)
+        
+        # ノイズ予測
+        noise_pred = model(obs_images, goal_images, noisy_actions, timesteps)
+        
+        # ノイズ除去ステップ
+        noisy_actions = noise_scheduler.step(
+            model_output=noise_pred,
+            timestep=k,
+            sample=noisy_actions
+        ).prev_sample
+
+    # アクションの取得
+    actions = get_action(noisy_actions, ACTION_STATS)
+
+    return {
+        'actions': actions,
+        'distance': None  # distanceは使用しない
+    }
