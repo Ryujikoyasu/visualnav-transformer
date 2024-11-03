@@ -66,10 +66,14 @@ def train_eval_loop_nomad_adapter(
     """
     latest_path = os.path.join(project_folder, f"latest.pth")
     
+    # Adapterのパラメータを取得
+    adapter_params = [p for n, p in model.named_parameters() if 'adapter' in n]
+    
     # EMAModelの初期化を修正
     ema_model = EMAModel(
         model=model,
-        power=0.75
+        power=0.75,
+        parameters=adapter_params  # パラメータを明示的に指定
     )
     
     # Adapterパラメータ以外を更新しないようにする
