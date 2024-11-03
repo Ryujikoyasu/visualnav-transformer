@@ -37,9 +37,12 @@ class NoMaDAdapter(nn.Module):
         current_obs = obs_img[:, -1]
         
         # 2. vision_encoderを通す
+        # obs_imgとgoal_imageをチャネル方向に連結して6チャネルにする
+        obsgoal_img = torch.cat([obs_img.view(batch_size, -1, obs_img.size(3), obs_img.size(4)), goal_image], dim=1)
+        
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
-            obs_img=obs_img.view(batch_size, -1, obs_img.size(3), obs_img.size(4)),
+            obs_img=obsgoal_img,  # 修正: 6チャネルのobsgoal_imgを渡す
             goal_img=goal_image,
             input_goal_mask=torch.ones(batch_size, 1, device=device)
         )
