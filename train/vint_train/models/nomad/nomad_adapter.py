@@ -44,13 +44,14 @@ class NoMaDAdapter(nn.Module):
         print(f"obsgoal_img shape: {obsgoal_img.shape}")
         
         # 3. 観測画像を元の形状に戻す
-        obs_img = obs_img.view(batch_size, -1, obs_img.size(3), obs_img.size(4))  # (B, context_size*3, H, W)
+        context_imgs = obs_img[:, :-1]  # 最後の画像を除外
+        context_imgs = context_imgs.reshape(batch_size, -1, obs_img.size(3), obs_img.size(4))  # (B, (context_size-1)*3, H, W)
         
         # 4. vision_encoderを通す
         obs_encoding = self.base_model.forward(
             func_name="vision_encoder",
-            obs_img=obs_img,
-            goal_img=obsgoal_img,
+            obs_img=context_imgs,  # 最後の画像を除いたコンテキスト画像
+            goal_img=obsgoal_img,  # 6チャンネルの目標画像
             input_goal_mask=torch.ones(batch_size, 1, device=device)
         )
         print(f"obs_encoding shape: {obs_encoding.shape}")
