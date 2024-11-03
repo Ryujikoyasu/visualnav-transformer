@@ -22,9 +22,12 @@ class DataCollector(Node):
                            help='データの保存先ディレクトリ')
         args, _ = parser.parse_known_args()
         
+        # ベースディレクトリを保存
+        self.base_save_dir = args.save_dir
+        
         # 現在時刻をディレクトリ名に含める
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        self.save_dir = os.path.join(args.save_dir, f'traj_{timestamp}')
+        self.save_dir = os.path.join(self.base_save_dir, f'traj_{timestamp}')
         
         # ディレクトリの作成
         os.makedirs(self.save_dir, exist_ok=True)
