@@ -92,12 +92,31 @@ def load_model(
             dist_pred_net=dist_pred_network,
         )
     elif model_type == "nomad_adapter":
+        # NoMaD_ViNTに必要なパラメータのみを抽出
+        vint_params = {
+            "obs_encoding_size": config["encoding_size"],
+            "context_size": config["context_size"],
+            "mha_num_attention_heads": config["mha_num_attention_heads"],
+            "mha_num_attention_layers": config["mha_num_attention_layers"],
+            "mha_ff_dim_factor": config["mha_ff_dim_factor"],
+        }
+        
+        # UnetModelに必要なパラメータのみを抽出
+        unet_params = {
+            "input_dim": 2,  # twistの次元
+            "global_cond_dim": config["encoding_size"],
+            "down_dims": config["down_dims"],
+            "cond_predict_scale": config["cond_predict_scale"],
+        }
+
+        # ベースモデルとしてnomadを読み込む
         base_model = NoMaD(
-            vision_encoder=NoMaD_ViNT(**config),
-            noise_pred_net=UnetModel(**config),
-            dist_pred_net=DenseNetwork(config["obs_encoding_size"])
+            vision_encoder=NoMaD_ViNT(**vint_params),
+            noise_pred_net=UnetModel(**unet_params),
+            dist_pred_net=DenseNetwork(config["encoding_size"])
         ).to(device)
         
+        # ベースモデルの重みを読み込む
         if os.path.exists(model_path):
             print(f"Loading model from {model_path}")
             state_dict = torch.load(model_path)
