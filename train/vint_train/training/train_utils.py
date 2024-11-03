@@ -1390,6 +1390,11 @@ def evaluate_nomad_adapter(
                 goal_image = data['goal_image'].to(device)
                 twists = data['twist'].to(device)
                 
+                # 可視化用の画像を準備
+                obs_images = torch.split(obs_image, 3, dim=1)
+                batch_viz_obs_images = TF.resize(obs_images[-1], VISUALIZATION_IMAGE_SIZE[::-1])
+                batch_viz_goal_images = TF.resize(goal_image, VISUALIZATION_IMAGE_SIZE[::-1])
+                
                 B = twists.shape[0]
 
                 # ノイズの追加
