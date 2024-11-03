@@ -1175,9 +1175,79 @@ def visualize_diffusion_action_distribution(
         wandb.log({f"{eval_type}_action_samples": wandb_list}, commit=False)
 
 
+### 以下，adapterの学習用の関数
+
+class CustomEMA:
+    def __init__(self, model: nn.Module, decay: float, param_names: List[str] = None):
+        """
+        カスタムExponential Moving Averageクラス。
+
+        Args:
+            model (nn.Module): EMAを適用するモデル。
+            decay (float): EMAの減衰率（0 < decay < 1）。
+            param_names (List[str], optional): EMAを適用するパラメータの名前。指定しない場合は全てのパラメータを対象。
+        """
+        self.decay = decay
+        self.shadow = {}
+        self.param_names = param_names if param_names is not None else []
+
+        for name, param in model.named_parameters():
+            if self.param_names and name not in self.param_names:
+                continue
+            if param.requires_grad:
+                self.shadow[name] = param.data.clone()
+
+    def step(self, model: nn.Module):
+        """
+        EMAを更新する。
+
+        Args:
+            model (nn.Module): パラメータを更新するモデル。
+        """
+        for name, param in model.named_parameters():
+            if self.param_names and name not in self.param_names:
+                continue
+            if name in self.shadow:
+                new_average = self.decay * self.shadow[name] + (1.0 - self.decay) * param.data
+                self.shadow[name] = new_average.clone()
+
+    def apply_shadow(self, model: nn.Module):
+        """
+        モデルにEMAの重みを適用する。
+
+        Args:
+            model (nn.Module): 重みを適用するモデル。
+        """
+        for name, param in model.named_parameters():
+            if self.param_names and name not in self.param_names:
+                continue
+            if name in self.shadow:
+                param.data.copy_(self.shadow[name])
+
+    def state_dict(self) -> Dict[str, torch.Tensor]:
+        """
+        EMAの状態を辞書として取得する。
+
+        Returns:
+            Dict[str, torch.Tensor]: EMAの状態。
+        """
+        return {k: v.clone() for k, v in self.shadow.items()}
+
+    def load_state_dict(self, state_dict: Dict[str, torch.Tensor]):
+        """
+        EMAの状態をロードする。
+
+        Args:
+            state_dict (Dict[str, torch.Tensor]): ロードする状態辞書。
+        """
+        for k, v in state_dict.items():
+            if k in self.shadow:
+                self.shadow[k] = v.clone()
+
+
 def train_nomad_adapter(
     model: nn.Module,
-    ema_model: EMAModel,
+    ema_model: CustomEMA,
     optimizer: Adam,
     dataloader: DataLoader,
     transform: transforms,
@@ -1194,25 +1264,19 @@ def train_nomad_adapter(
     use_wandb: bool = True,
 ):
     """Adapter層のみを学習するNOMADの学習関数"""
-    goal_mask_prob = torch.clip(torch.tensor(goal_mask_prob), 0, 1)
     model.train()
     num_batches = len(dataloader)
-
-    # ベースモデルのパラメータを凍結
-    for name, param in model.named_parameters():
-        if 'adapter' not in name:
-            param.requires_grad = False
 
     # ロガーの設定
     loss_logger = Logger("adapter_loss", "train", window_size=print_log_freq)
     loggers = {"adapter_loss": loss_logger}
 
-    with tqdm.tqdm(dataloader, desc="Train Batch", leave=False) as tepoch:
+    with tqdm(dataloader, desc="Train Batch", leave=False) as tepoch:
         for i, data in enumerate(tepoch):
             # データの準備
-            images = data['image'].to(device)
-            goal_images = data['goal_image'].to(device)
-            twists = data['twist'].to(device)
+            images = data['image'].to(device)  # (B, context_size*C, H, W)
+            goal_images = data['goal_image'].to(device)  # (B, C, H, W)
+            twists = data['twist'].to(device)  # (B, len_traj_pred, 2)
             
             B = twists.shape[0]
 
@@ -1237,8 +1301,8 @@ def train_nomad_adapter(
             loss.backward()
             optimizer.step()
 
-            # EMAの更新
-            ema_model.step(model)  # 単純にstepメソッドを使用
+            # EMAの更新（Adapterのパラメータのみ）
+            ema_model.step(model)
 
             # ロギング
             loss_cpu = loss.item()

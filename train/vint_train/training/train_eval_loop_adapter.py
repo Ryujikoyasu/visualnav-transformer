@@ -6,11 +6,9 @@ import torch
 from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torchvision import transforms
-from diffusers.training_utils import EMAModel
 import time
-import copy
 
-from .train_utils import train_nomad_adapter, evaluate_nomad
+from .train_utils import train_nomad_adapter, evaluate_nomad, CustomEMA
 
 def train_eval_loop_nomad_adapter(
     train_model: bool,
@@ -38,14 +36,14 @@ def train_eval_loop_nomad_adapter(
     """Adapter層を使用したNOMADモデルの学習ループ"""
     latest_path = os.path.join(project_folder, f"latest.pth")
     
-    # Adapterのパラメータを取得
-    adapter_params = [p for n, p in model.named_parameters() if 'adapter' in n]
+    # Adapterのパラメータ名を取得
+    adapter_param_names = [n for n, p in model.named_parameters() if 'adapter' in n]
     
-    # EMAModelの初期化
-    ema_model = EMAModel(
+    # CustomEMAの初期化
+    ema_model = CustomEMA(
         model=model,
-        power=0.75,
-        parameters=adapter_params
+        decay=0.75,
+        param_names=adapter_param_names
     )
 
     # 訓練開始時刻を記録
@@ -78,11 +76,12 @@ def train_eval_loop_nomad_adapter(
                 use_wandb=use_wandb,
             )
 
-        # モデルの保存
+        # EMAモデルの保存
         numbered_path = os.path.join(project_folder, f"ema_{epoch}.pth")
-        torch.save(ema_model.averaged_model.state_dict(), numbered_path)
+        torch.save(ema_model.state_dict(), numbered_path)
         print(f"Saved EMA model to {numbered_path}")
 
+        # 元のモデルの保存
         numbered_path = os.path.join(project_folder, f"{epoch}.pth")
         torch.save(model.state_dict(), numbered_path)
         torch.save(model.state_dict(), latest_path)
@@ -93,7 +92,8 @@ def train_eval_loop_nomad_adapter(
         torch.save(optimizer.state_dict(), optimizer_path)
         
         scheduler_path = os.path.join(project_folder, f"scheduler_{epoch}.pth")
-        torch.save(lr_scheduler.state_dict(), scheduler_path)
+        if lr_scheduler:
+            torch.save(lr_scheduler.state_dict(), scheduler_path)
 
         # 評価
         if (epoch + 1) % eval_freq == 0:
@@ -102,7 +102,7 @@ def train_eval_loop_nomad_adapter(
                 model.eval()
                 evaluate_nomad(
                     eval_type=dataset_type,
-                    ema_model=ema_model,
+                    ema_model=ema_model,  # evaluate_nomadでカスタムEMAを使用
                     dataloader=test_loader,
                     transform=transform,
                     device=device,
@@ -124,7 +124,7 @@ def train_eval_loop_nomad_adapter(
     end_time = time.time()
     training_time = end_time - start_time
 
-    # メトリクスの記録
+    # メトリクスの記録 (実装が必要)
     metrics = {
         "final_train_loss": final_train_loss,
         "final_test_loss": final_test_loss,
