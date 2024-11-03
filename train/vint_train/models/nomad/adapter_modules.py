@@ -27,6 +27,15 @@ class AdapterTransformerBlock(nn.Module):
     def __init__(self, base_transformer_block, adapter_bottleneck_dim):
         super().__init__()
         self.base_block = base_transformer_block
+        # 必要な属性を基のブロックから継承
+        self.self_attn = base_transformer_block.self_attn
+        self.norm1 = base_transformer_block.norm1
+        self.norm2 = base_transformer_block.norm2
+        self.dropout = base_transformer_block.dropout
+        self.mlp = base_transformer_block.mlp
+        self.batch_first = base_transformer_block.self_attn.batch_first
+        
+        # Adapter層の追加
         self.adapter1 = AdapterLayer(
             input_dim=base_transformer_block.norm1.normalized_shape[0],
             bottleneck_dim=adapter_bottleneck_dim
@@ -36,20 +45,21 @@ class AdapterTransformerBlock(nn.Module):
             bottleneck_dim=adapter_bottleneck_dim
         )
         
-    def forward(self, x):
+    def forward(self, x, src_mask=None, src_key_padding_mask=None):
         # Self-attention + Adapter1
         residual = x
-        x = self.base_block.norm1(x)
-        x = self.base_block.attn(x)
-        x = self.base_block.drop_path(x)
+        x = self.norm1(x)
+        x = self.self_attn(x, x, x, attn_mask=src_mask,
+                          key_padding_mask=src_key_padding_mask)[0]
+        x = self.dropout(x)
         x = self.adapter1(x)
         x = x + residual
         
         # FFN + Adapter2
         residual = x
-        x = self.base_block.norm2(x)
-        x = self.base_block.mlp(x)
-        x = self.base_block.drop_path(x)
+        x = self.norm2(x)
+        x = self.mlp(x)
+        x = self.dropout(x)
         x = self.adapter2(x)
         x = x + residual
         return x 
