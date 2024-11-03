@@ -112,7 +112,7 @@ def load_model(
         # ベースモデルとしてnomadを読み込む
         base_model = NoMaD(
             vision_encoder=NoMaD_ViNT(**vint_params),
-            noise_pred_net=UnetModel(**unet_params),
+            noise_pred_net=ConditionalUnet1D(**unet_params),
             dist_pred_net=DenseNetwork(config["encoding_size"])
         ).to(device)
         
