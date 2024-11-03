@@ -1237,13 +1237,8 @@ def train_nomad_adapter(
             loss.backward()
             optimizer.step()
 
-            # EMAの更新（Adapterのパラメータのみ）
-            with torch.no_grad():
-                for name, param in model.named_parameters():
-                    if 'adapter' in name:
-                        ema_model.shadow_params[name].mul_(ema_model.decay).add_(
-                            param.data * (1 - ema_model.decay)
-                        )
+            # EMAの更新
+            ema_model.step(model)  # 単純にstepメソッドを使用
 
             # ロギング
             loss_cpu = loss.item()
