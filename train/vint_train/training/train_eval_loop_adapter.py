@@ -103,14 +103,14 @@ def train_eval_loop_nomad_adapter(
                 print(f"obsgoal_images: {obsgoal_images.shape}")
                 print(f"noisy_twists: {noisy_twists.shape}")
                 
-                timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (noisy_twists.shape[0],), device=device).long()
+                timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (noisy_twists.shape[0],), device=device).long()
                 
                 # ノイズの追加とモデルの予測
                 noise = torch.randn_like(noisy_twists)
                 noisy_twists = noise_scheduler.add_noise(noisy_twists, noise, timesteps)
                 
                 # モデルの予測（ゴール情報なし）
-                noise_pred = model(obsgoal_images, noisy_twists, timesteps)
+                noise_pred = model(images, goal_images, noisy_twists, timesteps)
                 
                 # 損失の計算
                 loss = torch.nn.functional.mse_loss(noise_pred, noise)
