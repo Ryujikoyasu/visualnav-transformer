@@ -77,7 +77,7 @@ def train_eval_loop_nomad_adapter(
     )
     
     # Adapterパラメータ以外を更新しないようにする
-    for name, param in ema_model.averaged_model.named_parameters():
+    for name, param in ema_model.model.named_parameters():
         if 'adapter' not in name:
             param.requires_grad = False
 
@@ -146,7 +146,7 @@ def train_eval_loop_nomad_adapter(
 
         # モデルの保存
         numbered_path = os.path.join(project_folder, f"ema_{epoch}.pth")
-        torch.save(ema_model.averaged_model.state_dict(), numbered_path)
+        torch.save(ema_model.model.state_dict(), numbered_path)
         numbered_path = os.path.join(project_folder, f"ema_latest.pth")
         print(f"Saved EMA model to {numbered_path}")
 
@@ -185,7 +185,7 @@ def train_eval_loop_nomad_adapter(
                         noisy_twists = noise_scheduler.add_noise(twists, noise, timesteps)
                         
                         # ゴールマスクを追加
-                        noise_pred = ema_model.averaged_model(images, goal_images, noisy_twists, timesteps, goal_mask=goal_mask)
+                        noise_pred = ema_model.model(images, goal_images, noisy_twists, timesteps, goal_mask=goal_mask)
                         
                         # 損失の計算
                         loss = torch.nn.functional.mse_loss(noise_pred, noise)
@@ -203,7 +203,7 @@ def train_eval_loop_nomad_adapter(
                     torch.save({
                         'epoch': epoch,
                         'model_state_dict': model.state_dict(),
-                        'ema_model_state_dict': ema_model.averaged_model.state_dict(),
+                        'ema_model_state_dict': ema_model.model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
                         'scheduler_state_dict': lr_scheduler.state_dict() if lr_scheduler else None,
                         'loss': best_test_loss,
