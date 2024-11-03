@@ -1228,7 +1228,7 @@ class CustomEMA:
         EMAの状態を辞書として取得する。
 
         Returns:
-            Dict[str, torch.Tensor]: EMAの状態。
+            Dict[str, torch.Tensor]: EMA��状態。
         """
         return {k: v.clone() for k, v in self.shadow.items()}
 
@@ -1424,6 +1424,10 @@ def evaluate_nomad_adapter(
                     print(f"(epoch {epoch}) (batch {i}/{num_eval_batches - 1}) {logger.display()}")
 
                 if image_log_freq != 0 and i % image_log_freq == 0:
+                    # 可視化用のダミーデータを作成
+                    dummy_distance = torch.zeros(B).to(device)  # 距離を0として可視化
+                    dummy_goal_pos = torch.zeros(B, 2).to(device)  # 原点を目標置として可視化
+                    
                     visualize_diffusion_action_distribution(
                         model,
                         noise_scheduler,
@@ -1432,8 +1436,8 @@ def evaluate_nomad_adapter(
                         batch_viz_obs_images,
                         batch_viz_goal_images,
                         twists,
-                        distance,
-                        goal_pos,
+                        dummy_distance,  # ダミーデータを使用
+                        dummy_goal_pos,  # ダミーデータを使用
                         device,
                         eval_type,
                         project_folder,
