@@ -91,6 +91,21 @@ def load_model(
             noise_pred_net=noise_pred_net,
             dist_pred_net=dist_pred_network,
         )
+    elif model_type == "nomad_adapter":
+        base_model = NoMaD(
+            vision_encoder=NoMaD_ViNT(**config),
+            noise_pred_net=UnetModel(**config),
+            dist_pred_net=DenseNetwork(config["obs_encoding_size"])
+        ).to(device)
+        
+        if os.path.exists(model_path):
+            print(f"Loading model from {model_path}")
+            state_dict = torch.load(model_path)
+            base_model.load_state_dict(state_dict)
+        else:
+            raise FileNotFoundError(f"Model weights not found at {model_path}")
+        
+        return base_model
     else:
         raise ValueError(f"Invalid model type: {model_type}")
     

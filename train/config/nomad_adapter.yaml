@@ -1,5 +1,5 @@
 # モデル設定
-model_type: nomad_adapter
+model_type: "nomad_adapter"
 vision_encoder: nomad_vint
 encoding_size: 256
 obs_encoder: efficientnet-b0
