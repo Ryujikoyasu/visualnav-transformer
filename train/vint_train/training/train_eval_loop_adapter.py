@@ -91,14 +91,16 @@ def train_eval_loop_nomad_adapter(
                 
                 # データの準備
                 images = batch['image'].to(device)  # (B, context_size*C, H, W)
-                print(f"Debug - train_eval_loop_nomad_adapter - images shape: {images.shape}")  # デバッグ出力
                 goal_images = batch['goal_image'].to(device)  # (B, C, H, W)
+                
+                # 画像をチャネル方向に連結して6チャネルにする
+                obsgoal_images = torch.cat([images, goal_images], dim=1)  # (B, 6, H, W)
+                
                 noisy_twists = batch['twist'].to(device)
                 
                 # バッチサイズの確認
                 print(f"Debug - Batch shapes:")
-                print(f"images: {images.shape}")
-                print(f"goal_images: {goal_images.shape}")
+                print(f"obsgoal_images: {obsgoal_images.shape}")
                 print(f"noisy_twists: {noisy_twists.shape}")
                 
                 timesteps = torch.randint(0, noise_scheduler.num_train_timesteps, (noisy_twists.shape[0],), device=device).long()
@@ -108,7 +110,7 @@ def train_eval_loop_nomad_adapter(
                 noisy_twists = noise_scheduler.add_noise(noisy_twists, noise, timesteps)
                 
                 # モデルの予測（ゴール情報なし）
-                noise_pred = model(images, goal_images, noisy_twists, timesteps)
+                noise_pred = model(obsgoal_images, noisy_twists, timesteps)
                 
                 # 損失の計算
                 loss = torch.nn.functional.mse_loss(noise_pred, noise)
