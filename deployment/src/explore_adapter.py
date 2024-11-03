@@ -91,14 +91,16 @@ class ExplorationAdapter(Node):
         for task_name, adapter_path in model_paths[self.args.model]["adapter_path"].items():
             if os.path.exists(adapter_path):
                 self.get_logger().info(f"Loading adapter for task {task_name} from {adapter_path}")
-                adapter_state = torch.load(adapter_path)
+                # ファイルからアダプターの状態を読み込む
+                adapter_state = torch.load(adapter_path, map_location=device)
                 self.adapters[task_name] = adapter_state
             else:
                 raise FileNotFoundError(f"Adapter weights not found at {adapter_path}")
 
         # デフォルトのアダプターを読み込む
         if self.args.task in self.adapters:
-            self.model.load_adapter(self.adapters[self.args.task])
+            # アダプターの状態を直接モデルに適用
+            self.model.load_state_dict(self.adapters[self.args.task], strict=False)
             self.get_logger().info(f"Loaded adapter for task: {self.args.task}")
         else:
             raise ValueError(f"No adapter found for task: {self.args.task}")
