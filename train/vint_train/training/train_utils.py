@@ -1214,7 +1214,7 @@ class CustomEMA:
         モデルにEMAの重みを適用する。
 
         Args:
-            model (nn.Module): ��みを適用するモデル。
+            model (nn.Module): みを適用するモデル。
         """
         for name, param in model.named_parameters():
             if self.param_names and name not in self.param_names:
@@ -1224,7 +1224,7 @@ class CustomEMA:
 
     def state_dict(self) -> Dict[str, torch.Tensor]:
         """
-        EMA状態を辞書として取得する。
+        EMA状態を辞書として得する。
 
         Returns:
             Dict[str, torch.Tensor]: EMA状態。
@@ -1389,11 +1389,6 @@ def evaluate_nomad_adapter(
                 goal_image = data['goal_image'].to(device)
                 twists = data['twist'].to(device)
                 
-                # 可視化用の画像を準備
-                obs_images = torch.split(obs_image, 3, dim=1)
-                batch_viz_obs_images = TF.resize(obs_images[-1], VISUALIZATION_IMAGE_SIZE[::-1])
-                batch_viz_goal_images = TF.resize(goal_image, VISUALIZATION_IMAGE_SIZE[::-1])
-                
                 B = twists.shape[0]
 
                 # ノイズの追加
@@ -1421,30 +1416,6 @@ def evaluate_nomad_adapter(
                     logger = loggers["adapter_eval_loss"]
                     logger.log_data(loss_cpu)
                     print(f"(epoch {epoch}) (batch {i}/{num_eval_batches - 1}) {logger.display()}")
-
-                if image_log_freq != 0 and i % image_log_freq == 0:
-                    # 可視化用のダミーデータを作成
-                    dummy_distance = torch.zeros(B).to(device)
-                    dummy_goal_pos = torch.zeros(B, 2).to(device)
-                    
-                    visualize_diffusion_action_distribution_adapter(
-                        model,
-                        noise_scheduler,
-                        obs_image,
-                        goal_image,
-                        batch_viz_obs_images,
-                        batch_viz_goal_images,
-                        twists,
-                        dummy_distance,
-                        dummy_goal_pos,
-                        device,
-                        eval_type,
-                        project_folder,
-                        epoch,
-                        num_images_log,
-                        30,
-                        use_wandb,
-                    )
 
         # 評価後にモデルの重みを元に戻す
         ema_model.restore(model)
