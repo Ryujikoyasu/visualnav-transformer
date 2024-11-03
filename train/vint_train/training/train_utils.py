@@ -1199,7 +1199,7 @@ class CustomEMA:
 
     def step(self, model: nn.Module):
         """
-        EMAを更新する。
+        EMAを更��する。
 
         Args:
             model (nn.Module): パラメータを更新するモデル。
@@ -1263,7 +1263,7 @@ def train_nomad_adapter(
     num_images_log: int = 8,
     use_wandb: bool = True,
 ):
-    """Adapter層のみを学習するNOMADの学習関数"""
+    """Adapter層のみを学習するNOMADの学習���数"""
     model.train()
     num_batches = len(dataloader)
 
@@ -1322,6 +1322,7 @@ def train_nomad_adapter(
 
 def evaluate_nomad_adapter(
     eval_type: str,
+    model: nn.Module,
     ema_model: CustomEMA,
     dataloader: DataLoader,
     transform: transforms,
@@ -1338,8 +1339,6 @@ def evaluate_nomad_adapter(
     use_wandb: bool = True,
 ):
     """評価用関数（NOMAD用）"""
-    # EMAの重みを適用
-    # ema_model = ema_model.averaged_model  # この行を削除
     model.eval()  # modelをeval modeに
     
     # 評価中はEMAの重みを使用
