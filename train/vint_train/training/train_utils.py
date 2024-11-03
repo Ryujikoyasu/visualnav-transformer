@@ -1175,3 +1175,84 @@ def visualize_diffusion_action_distribution(
         wandb.log({f"{eval_type}_action_samples": wandb_list}, commit=False)
 
 
+def train_nomad_adapter(
+    model: nn.Module,
+    ema_model: EMAModel,
+    optimizer: Adam,
+    dataloader: DataLoader,
+    transform: transforms,
+    device: torch.device,
+    noise_scheduler: DDPMScheduler,
+    goal_mask_prob: float,
+    project_folder: str,
+    epoch: int,
+    alpha: float = 1e-4,
+    print_log_freq: int = 100,
+    wandb_log_freq: int = 10,
+    image_log_freq: int = 1000,
+    num_images_log: int = 8,
+    use_wandb: bool = True,
+):
+    """Adapter層のみを学習するNOMADの学習関数"""
+    goal_mask_prob = torch.clip(torch.tensor(goal_mask_prob), 0, 1)
+    model.train()
+    num_batches = len(dataloader)
+
+    # ベースモデルのパラメータを凍結
+    for name, param in model.named_parameters():
+        if 'adapter' not in name:
+            param.requires_grad = False
+
+    # ロガーの設定
+    loss_logger = Logger("adapter_loss", "train", window_size=print_log_freq)
+    loggers = {"adapter_loss": loss_logger}
+
+    with tqdm.tqdm(dataloader, desc="Train Batch", leave=False) as tepoch:
+        for i, data in enumerate(tepoch):
+            # データの準備
+            images = data['image'].to(device)
+            goal_images = data['goal_image'].to(device)
+            twists = data['twist'].to(device)
+            
+            B = twists.shape[0]
+
+            # タイムステップの生成
+            timesteps = torch.randint(
+                0, noise_scheduler.config.num_train_timesteps,
+                (B,), device=device
+            ).long()
+
+            # ノイズの追加
+            noise = torch.randn_like(twists)
+            noisy_twists = noise_scheduler.add_noise(twists, noise, timesteps)
+
+            # モデルの予測
+            noise_pred = model(images, goal_images, noisy_twists, timesteps)
+
+            # 損失の計算
+            loss = F.mse_loss(noise_pred, noise)
+
+            # 最適化
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # EMAの更新（Adapterのパラメータのみ）
+            ema_model.step(model)
+
+            # ロギング
+            loss_cpu = loss.item()
+            tepoch.set_postfix(loss=loss_cpu)
+            
+            if use_wandb:
+                wandb.log({"adapter_loss": loss_cpu})
+
+            if i % print_log_freq == 0:
+                logger = loggers["adapter_loss"]
+                logger.log_data(loss_cpu)
+                print(f"(epoch {epoch}) (batch {i}/{num_batches - 1}) {logger.display()}")
+
+            if use_wandb and i % wandb_log_freq == 0:
+                wandb.log({"train/adapter_loss": loss_cpu}, commit=True)
+
+
