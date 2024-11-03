@@ -13,7 +13,7 @@ from omegaconf import OmegaConf
 from vint_train.models.nomad.nomad import NoMaD, DenseNetwork
 from vint_train.models.nomad.nomad_vint import NoMaD_ViNT, replace_bn_with_gn
 from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
-from vint_train.models.nomad.nomad_adapter import NoMaDAdapter
+from vint_train.models.nomad.adapter import AdapterLayer
 from vint_train.data.twist_dataset_adapter import TwistDataset
 from vint_train.training.train_eval_loop_adapter import train_eval_loop_nomad_adapter
 

@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torch.optim import Adam
 from torchvision import transforms
 import time
-from models.nomad.adapter_modules import AdapterLayer
+from vint_train.models.nomad.nomad_adapter import AdapterLayer
 
 from train_utils import train_nomad_adapter, evaluate_nomad_adapter, CustomEMA
 
