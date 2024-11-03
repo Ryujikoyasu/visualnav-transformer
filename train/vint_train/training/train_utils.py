@@ -1271,7 +1271,7 @@ def train_nomad_adapter(
     loss_logger = Logger("adapter_loss", "train", window_size=print_log_freq)
     loggers = {"adapter_loss": loss_logger}
 
-    with tqdm(dataloader, desc="Train Batch", leave=False) as tepoch:
+    with tqdm.tqdm(dataloader, desc="Train Batch", leave=False) as tepoch:
         for i, data in enumerate(tepoch):
             # データの準備
             images = data['image'].to(device)  # (B, context_size*C, H, W)
