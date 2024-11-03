@@ -92,23 +92,19 @@ def train_eval_loop_nomad_adapter(
                 # データの準備
                 images = batch['image'].to(device)  # (B, context_size*C, H, W)
                 goal_images = batch['goal_image'].to(device)  # (B, C, H, W)
-                noisy_twists = batch['twist'].to(device)
+                twists = batch['twist'].to(device)  # (B, len_traj_pred, 2)
                 
-                # 形状の確認
-                print(f"Initial noisy_twists shape: {noisy_twists.shape}")
+                B = twists.shape[0]  # バッチサイズ
+                
+                # タイムステップの生成
+                timesteps = torch.randint(
+                    0, noise_scheduler.config.num_train_timesteps,
+                    (B,), device=device
+                ).long()
                 
                 # ノイズの追加
-                noise = torch.randn_like(noisy_twists)
-                noisy_twists = noise_scheduler.add_noise(noisy_twists, noise, timesteps)
-                
-                # ノイズ追加後の形状確認
-                print(f"noisy_twists shape after noise addition: {noisy_twists.shape}")
-                
-                # noisy_twistsのチャネル数を2に変換
-                noisy_twists = noisy_twists.view(noisy_twists.size(0), -1, 2)
-                
-                # モデルの予測前の形状確認
-                print(f"noisy_twists shape before model input: {noisy_twists.shape}")
+                noise = torch.randn_like(twists)
+                noisy_twists = noise_scheduler.add_noise(twists, noise, timesteps)
                 
                 # モデルの予測
                 noise_pred = model(images, goal_images, noisy_twists, timesteps)
