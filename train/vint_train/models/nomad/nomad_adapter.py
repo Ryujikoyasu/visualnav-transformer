@@ -11,10 +11,19 @@ class NoMaDAdapter(nn.Module):
         super().__init__()
         self.base_model = base_model
         
-        # アダプター層をTransformerブロックに組み込む
-        for name, block in self.base_model.transformer_blocks.named_children():
-            adapted_block = AdapterTransformerBlock(block, adapter_bottleneck_dim)
-            setattr(self.base_model.transformer_blocks, name, adapted_block)
+        # アダプター層を組み込む
+        # ここでは、transformer_blocksが存在しない場合の処理を追加
+        if hasattr(self.base_model, 'transformer_blocks'):
+            for name, block in self.base_model.transformer_blocks.named_children():
+                adapted_block = AdapterTransformerBlock(block, adapter_bottleneck_dim)
+                setattr(self.base_model.transformer_blocks, name, adapted_block)
+        else:
+            # 代替の方法でアダプター層を組み込む
+            # 例えば、self.base_modelの他の属性を使用してアダプターを組み込む
+            # ここでは仮にself.base_model.blocksを使用する例を示します
+            for name, block in self.base_model.blocks.named_children():
+                adapted_block = AdapterTransformerBlock(block, adapter_bottleneck_dim)
+                setattr(self.base_model.blocks, name, adapted_block)
         
         # ベースモデルのパラメータを凍結（アダプター層以外）
         for name, param in self.base_model.named_parameters():
@@ -44,8 +53,15 @@ class NoMaDAdapter(nn.Module):
         print(f"obs_encoding shape: {obs_encoding.shape}")
         
         # Adapterを通す
-        adapted_encoding = self.base_model.transformer_blocks[0].adapter1(obs_encoding)
-        adapted_encoding = self.base_model.transformer_blocks[0].adapter2(adapted_encoding)
+        adapted_encoding = obs_encoding
+        if hasattr(self.base_model, 'transformer_blocks'):
+            for block in self.base_model.transformer_blocks:
+                adapted_encoding = block.adapter1(adapted_encoding)
+                adapted_encoding = block.adapter2(adapted_encoding)
+        else:
+            for block in self.base_model.blocks:
+                adapted_encoding = block.adapter1(adapted_encoding)
+                adapted_encoding = block.adapter2(adapted_encoding)
         print(f"adapted_encoding shape: {adapted_encoding.shape}")
         
         # noise_pred_netを通す
