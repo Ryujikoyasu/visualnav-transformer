@@ -106,9 +106,6 @@ def main(config):
     
     # 事前学習済みの重みをロード
     checkpoint = torch.load(config["pretrained_path"])
-    print("Checkpoint keys:", checkpoint.keys())  # デバッグ用
-    
-    # チェックポイントの構造に応じてロード
     if "model_state_dict" in checkpoint:
         state_dict = checkpoint["model_state_dict"]
     elif "state_dict" in checkpoint:
@@ -116,21 +113,7 @@ def main(config):
     else:
         state_dict = checkpoint
     
-    # 互換性のないキーをスキップしてロード
-    missing_keys, unexpected_keys = base_model.load_state_dict(state_dict, strict=False)
-    print("Missing keys:", missing_keys)
-    print("Unexpected keys:", unexpected_keys)
-    
-    print(f"Loaded pretrained model from {config['pretrained_path']}")
-    
-    # 事前学習済みの重みをロード後に、位置エンコーディングの形状を確認
-    if 'vision_encoder.positional_encoding.pos_enc' in state_dict:
-        pos_enc_shape = state_dict['vision_encoder.positional_encoding.pos_enc'].shape
-        print(f"Checkpoint pos_enc shape: {pos_enc_shape}")
-
-    # 現在のモデルの形状も確認
-    current_pos_enc_shape = vision_encoder.positional_encoding.pos_enc.shape
-    print(f"Current model pos_enc shape: {current_pos_enc_shape}")
+    base_model.load_state_dict(state_dict, strict=False)
     
     # Adapterモデルの作成
     model = NoMaDAdapter(

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .nomad import NoMaD
-from .adapter_modules import add_adapter_to_transformer_layer, DiffusionAdapter
+from .adapter_modules import DiffusionAdapter
 
 class NoMaDAdapter(nn.Module):
     """
