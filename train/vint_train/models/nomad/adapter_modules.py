@@ -46,13 +46,13 @@ class DiffusionAdapterLayer(nn.Module):
         super().__init__()
         self.down_conv = nn.Conv1d(channels, bottleneck_channels, 1)  # 1x1 conv
         self.up_conv = nn.Conv1d(bottleneck_channels, channels, 1)    # 1x1 conv
-        self.norm = nn.GroupNorm(8, channels)  # UNetと同じGroupNormを使用
+        self.norm = nn.GroupNorm(8, channels)  # channelsを正しく設定
         
     def forward(self, x):
         residual = x
         x = self.norm(x)
         x = self.down_conv(x)
-        x = F.mish(x)  # UNetと同じMish活性化関数
+        x = F.mish(x)
         x = self.up_conv(x)
         return x + residual
 
