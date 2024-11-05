@@ -102,6 +102,11 @@ class DiffusionAdapter(nn.Module):
         if global_cond is not None:
             global_cond = self.cond_proj(global_cond)
             print(f"projected global_cond shape: {global_cond.shape}")  # デバッグ出力
+            
+            # t_embの次元をglobal_condに合わせる
+            t_emb = torch.cat([t_emb, torch.zeros_like(global_cond[:, :256])], dim=1)
+            print(f"expanded t_emb shape: {t_emb.shape}")  # デバッグ出力
+            
             t_emb = t_emb + global_cond
         
         # 形状の変更を明示的に行う
