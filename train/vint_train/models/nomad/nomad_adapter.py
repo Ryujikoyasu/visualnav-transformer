@@ -71,6 +71,9 @@ class NoMaDAdapter(nn.Module):
                 adapted_encoding = block(adapted_encoding)
         print(f"adapted_encoding shape: {adapted_encoding.shape}")
         
+        # noise_pred_netを通す前に次元を確認
+        print(f"Before noise_pred_net - adapted_encoding shape: {adapted_encoding.shape}")
+        
         # noise_pred_netを通す
         noise_pred = self.noise_pred_net(
             x=noisy_actions,

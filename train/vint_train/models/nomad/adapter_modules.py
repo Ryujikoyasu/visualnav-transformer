@@ -98,19 +98,18 @@ class DiffusionAdapter(nn.Module):
         B, seq_len, C = x.shape
         device = x.device
         
-        # Global conditioningの次元を調整
+        # タイムステップエンコーディング
+        t_emb = self.base_unet.diffusion_step_encoder(timesteps)
+        print(f"t_emb shape: {t_emb.shape}")  # デバッグ出力
+        
+        # Global conditioningの次元を調整（Noneチェックを明示的に）
         if global_cond is not None:
             global_cond = self.cond_proj(global_cond)
+            print(f"projected global_cond shape: {global_cond.shape}")  # デバッグ出力
+            t_emb = t_emb + global_cond
         
         # 形状の変更を明示的に行う
         x = x.permute(0, 2, 1).contiguous()
-        
-        # base_unetのタイムステップエンコーダを使用
-        t_emb = self.base_unet.diffusion_step_encoder(timesteps)
-        
-        # Global conditioning
-        if global_cond is not None:
-            t_emb = t_emb + global_cond
         
         # Downsampling
         h = []
