@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .nomad import NoMaD
-from .adapter_modules import AdapterTransformerBlock, add_adapter_to_transformer_layer
+from .adapter_modules import add_adapter_to_transformer_layer
 
 class NoMaDAdapter(nn.Module):
     """
