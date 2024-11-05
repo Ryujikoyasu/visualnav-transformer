@@ -65,32 +65,26 @@ class DiffusionAdapter(nn.Module):
         super().__init__()
         self.base_unet = base_unet
         
-        # タイムステップエンコーディングの次元を512に
-        self.time_embed_dim = 512
-        self.diffusion_step_encoder = nn.Sequential(
-            SinusoidalPosEmb(256),
-            nn.Linear(256, 1024),
-            nn.Mish(),
-            nn.Linear(1024, self.time_embed_dim)
-        )
+        # タイムステップエンコーディングは独自に生成せず、base_unetのものを使用
+        self.time_embed_dim = 512  # デバッグ用に保持
         
         # Global conditioningの次元を合わせる
-        self.cond_proj = nn.Linear(256, self.time_embed_dim)
+        self.cond_proj = nn.Linear(256, 512)  # base_unetの次元に合わせる
         
         # 各解像度のAdapterの次元を確認
         self.down_adapters = nn.ModuleList([
             DiffusionAdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in down_dims  # [64, 128, 256]
+            for dim in down_dims
         ])
         
         self.mid_adapter = DiffusionAdapterLayer(down_dims[-1], adapter_bottleneck_dim)
         
         self.up_adapters = nn.ModuleList([
             DiffusionAdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in reversed(down_dims)  # [256, 128, 64]
+            for dim in reversed(down_dims)
         ])
         
-        # デバッグ用の次元出力を追加
+        # デバッグ用の次元出力
         print(f"Time embedding dim: {self.time_embed_dim}")
         print(f"Down dims: {down_dims}")
         print(f"Adapter bottleneck dim: {adapter_bottleneck_dim}")
@@ -111,7 +105,7 @@ class DiffusionAdapter(nn.Module):
         # 形状の変更を明示的に行う
         x = x.permute(0, 2, 1).contiguous()
         
-        # Timestep embedding
+        # base_unetのタイムステップエンコーダを使用
         t_emb = self.base_unet.diffusion_step_encoder(timesteps)
         
         # Global conditioning
