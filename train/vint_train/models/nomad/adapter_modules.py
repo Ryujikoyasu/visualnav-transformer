@@ -28,14 +28,12 @@ class DiffusionAdapter(nn.Module):
         super().__init__()
         self.base_unet = base_unet
         
-        # 設定ファイルから指定された次元を使用
-        self.down_dims = down_dims
-        
         print("=== DiffusionAdapter Debug ===")
         print(f"Specified down_dims: {down_dims}")
         print("UNet structure:")
-        for i, (resnet, _) in enumerate(self.base_unet.downs):
-            print(f"Down {i}: {resnet}")
+        # モデルの構造を確認
+        for name, module in self.base_unet.named_children():
+            print(f"{name}: {module}")
         
         # ダウンサンプリング層のAdapters
         self.down_adapters = nn.ModuleList([

@@ -96,6 +96,10 @@ def main(config):
         cond_predict_scale=config["cond_predict_scale"],
     )
     
+    print("=== ConditionalUnet1D Structure ===")
+    for name, module in noise_pred_net.named_children():
+        print(f"{name}: {module}")
+    
     dist_pred_network = DenseNetwork(embedding_dim=config["encoding_size"])
     
     base_model = NoMaD(
