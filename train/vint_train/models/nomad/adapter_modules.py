@@ -26,11 +26,9 @@ def add_adapter_to_transformer_layer(transformer_layer: nn.TransformerEncoderLay
     """
     input_dim = transformer_layer.linear2.out_features
     
-    # Self-attention後のAdapter
-    attn_adapter = AdapterLayer(input_dim, adapter_bottleneck_dim)
-    
-    # FFN後のAdapter
-    ffn_adapter = AdapterLayer(input_dim, adapter_bottleneck_dim)
+    # Adapter層を作成してTransformerLayerのサブモジュールとして登録
+    transformer_layer.attn_adapter = AdapterLayer(input_dim, adapter_bottleneck_dim)
+    transformer_layer.ffn_adapter = AdapterLayer(input_dim, adapter_bottleneck_dim)
     
     # 元のforward関数を保存
     original_forward = transformer_layer.forward
@@ -39,8 +37,8 @@ def add_adapter_to_transformer_layer(transformer_layer: nn.TransformerEncoderLay
         # 元のforward関数を呼び出し
         x = original_forward(src, src_mask, src_key_padding_mask)
         # Adapter層を通す
-        x = attn_adapter(x)
-        x = ffn_adapter(x)
+        x = transformer_layer.attn_adapter(x)
+        x = transformer_layer.ffn_adapter(x)
         return x
     
     # 新しいforward関数を設定

@@ -51,7 +51,7 @@ num_images_log: 4
 eval_fraction: 0.25
 project_name: nomad_adapter
 run_name: nomad_adapter
-use_wandb: True
+use_wandb: False
 
 # その他の設定
 normalize: True

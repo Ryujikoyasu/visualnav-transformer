@@ -13,8 +13,14 @@ class NoMaDAdapter(nn.Module):
         
         # アダプター層をtransformer層に組み込む
         if hasattr(self.base_model.vision_encoder, 'sa_encoder'):
-            for layer in self.base_model.vision_encoder.sa_encoder.layers:
-                add_adapter_to_transformer_layer(layer, adapter_bottleneck_dim)
+            print("Found sa_encoder in vision_encoder")
+            for i, layer in enumerate(self.base_model.vision_encoder.sa_encoder.layers):
+                print(f"Layer {i} type:", type(layer))
+                if isinstance(layer, nn.TransformerEncoderLayer):
+                    print(f"Layer {i} is TransformerEncoderLayer")
+                    add_adapter_to_transformer_layer(layer, adapter_bottleneck_dim)
+                else:
+                    print(f"Warning: Layer {i} is not TransformerEncoderLayer")
         
         # ベースモデルのパラメータを凍結（アダプター層以外）
         for name, param in self.base_model.named_parameters():
