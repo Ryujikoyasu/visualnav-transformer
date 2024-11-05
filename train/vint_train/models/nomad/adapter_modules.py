@@ -47,25 +47,41 @@ class DiffusionAdapter(nn.Module):
         super().__init__()
         self.base_unet = base_unet
         
-        # Global conditioningの次元を合わせるための層を追加
-        self.cond_proj = nn.Linear(256, 512)  # 256 -> 512
+        # タイムステップエンコーディングの次元を512に
+        self.time_embed_dim = 512
+        self.diffusion_step_encoder = nn.Sequential(
+            SinusoidalPosEmb(256),
+            nn.Linear(256, 1024),
+            nn.Mish(),
+            nn.Linear(1024, self.time_embed_dim)
+        )
         
-        # ダウンサンプリング層のAdapters（各解像度の最初のブロックのみ）
+        # Global conditioningの次元を合わせる
+        self.cond_proj = nn.Linear(256, self.time_embed_dim)
+        
+        # 各解像度のAdapterの次元を確認
         self.down_adapters = nn.ModuleList([
             DiffusionAdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in down_dims
+            for dim in down_dims  # [64, 128, 256]
         ])
         
-        # 中間層のAdapter（最初のブロックのみ）
         self.mid_adapter = DiffusionAdapterLayer(down_dims[-1], adapter_bottleneck_dim)
         
-        # アップサンプリング層のAdapters（各解像度の最初のブロックのみ）
         self.up_adapters = nn.ModuleList([
             DiffusionAdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in reversed(down_dims)
+            for dim in reversed(down_dims)  # [256, 128, 64]
         ])
+        
+        # デバッグ用の次元出力を追加
+        print(f"Time embedding dim: {self.time_embed_dim}")
+        print(f"Down dims: {down_dims}")
+        print(f"Adapter bottleneck dim: {adapter_bottleneck_dim}")
     
     def forward(self, x, timesteps, global_cond):
+        # 入力の次元を表示
+        print(f"Input x shape: {x.shape}")
+        print(f"Global cond shape: {global_cond.shape}")
+        
         # Get dimensions
         B, seq_len, C = x.shape
         device = x.device
