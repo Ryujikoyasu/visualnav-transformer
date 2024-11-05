@@ -33,10 +33,10 @@ def add_adapter_to_transformer_layer(transformer_layer: nn.TransformerEncoderLay
     # 元のforward関数を保存
     original_forward = transformer_layer.forward
     
-    def new_forward(src, src_mask=None, is_causal=None, src_key_padding_mask=None):
+    def new_forward(src, src_mask=None, is_causal=False, src_key_padding_mask=None):
         # 元のforward関数を呼び出し
         x = original_forward(src, src_mask=src_mask, 
-                           is_causal=is_causal,
+                           is_causal=is_causal if is_causal is not None else False,
                            src_key_padding_mask=src_key_padding_mask)
         # Adapter層を通す
         x = transformer_layer.attn_adapter(x)
