@@ -47,6 +47,9 @@ class DiffusionAdapter(nn.Module):
         super().__init__()
         self.base_unet = base_unet
         
+        # Global conditioningの次元を合わせるための層を追加
+        self.cond_proj = nn.Linear(256, 512)  # 256 -> 512
+        
         # ダウンサンプリング層のAdapters（各解像度の最初のブロックのみ）
         self.down_adapters = nn.ModuleList([
             DiffusionAdapterLayer(dim, adapter_bottleneck_dim)
@@ -67,9 +70,12 @@ class DiffusionAdapter(nn.Module):
         B, seq_len, C = x.shape
         device = x.device
         
+        # Global conditioningの次元を調整
+        if global_cond is not None:
+            global_cond = self.cond_proj(global_cond)
+        
         # 形状の変更を明示的に行う
-        x = x.permute(0, 2, 1).contiguous()  # [B, seq_len, C] -> [B, C, seq_len]
-        print(f"Debug - x shape after permute: {x.shape}")  # デバッグ出力を追加
+        x = x.permute(0, 2, 1).contiguous()
         
         # Timestep embedding
         t_emb = self.base_unet.diffusion_step_encoder(timesteps)
@@ -118,7 +124,7 @@ class DiffusionAdapter(nn.Module):
         # Final convolution
         x = self.base_unet.final_conv(x)
         
-        # 最後に形状を戻す
-        x = x.permute(0, 2, 1).contiguous()  # [B, C, seq_len] -> [B, seq_len, C]
+        # Reshape output back: [B, channels, seq_len] -> [B, seq_len, channels]
+        x = x.transpose(1, 2)
         
         return x
