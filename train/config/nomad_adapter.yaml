@@ -16,7 +16,7 @@ pretrained_path: "/ssd/source/navigation/visualnav-transformer/deployment/model_
 # Adapter固有の設定
 adapter:
   bottleneck_dim: 64
-  lr: 1e-5
+  lr: 1e-4
 
 # 学習設定
 train: True
