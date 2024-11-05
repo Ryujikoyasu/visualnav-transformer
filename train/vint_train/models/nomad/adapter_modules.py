@@ -24,26 +24,35 @@ class DiffusionAdapter(nn.Module):
     """
     Diffusion PolicyのUNetにAdapter層を追加するためのクラス
     """
-    def __init__(self, base_unet, adapter_bottleneck_dim):
+    def __init__(self, base_unet, adapter_bottleneck_dim, down_dims):
         super().__init__()
         self.base_unet = base_unet
+        
+        # 設定ファイルから指定された次元を使用
+        self.down_dims = down_dims
+        
+        print("=== DiffusionAdapter Debug ===")
+        print(f"Specified down_dims: {down_dims}")
+        print("UNet structure:")
+        for i, (resnet, _) in enumerate(self.base_unet.downs):
+            print(f"Down {i}: {resnet}")
         
         # ダウンサンプリング層のAdapters
         self.down_adapters = nn.ModuleList([
             AdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in self.base_unet.down_dims
+            for dim in self.down_dims
         ])
         
         # 中間層のAdapter
         self.mid_adapter = AdapterLayer(
-            self.base_unet.down_dims[-1],
+            self.down_dims[-1],
             adapter_bottleneck_dim
         )
         
         # アップサンプリング層のAdapters
         self.up_adapters = nn.ModuleList([
             AdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in reversed(self.base_unet.down_dims)
+            for dim in reversed(self.down_dims)
         ])
         
         # ベースモデルのパラメータを凍結

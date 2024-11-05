@@ -23,7 +23,7 @@ train: True
 batch_size: 8
 num_workers: 4
 optimizer: adam
-lr: 1e-5
+lr: 1e-4
 num_epochs: 50
 
 # コンテキスト設定
@@ -51,7 +51,7 @@ num_images_log: 4
 eval_fraction: 0.5
 project_name: nomad_adapter
 run_name: nomad_adapter
-use_wandb: True
+use_wandb: False
 
 # その他の設定
 normalize: True

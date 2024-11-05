@@ -2,19 +2,21 @@ import torch
 import torch.nn as nn
 from .nomad import NoMaD
 from .adapter_modules import DiffusionAdapter
+from typing import List
 
 class NoMaDAdapter(nn.Module):
     """
     Adapter層を組み込んだNOMADモデル
     """
-    def __init__(self, base_model: NoMaD, adapter_bottleneck_dim: int):
+    def __init__(self, base_model: NoMaD, adapter_bottleneck_dim: int, down_dims: List[int]):
         super().__init__()
         self.base_model = base_model
         
         # Diffusion PolicyにAdapterを追加
         self.noise_pred_net = DiffusionAdapter(
             base_unet=self.base_model.noise_pred_net,
-            adapter_bottleneck_dim=adapter_bottleneck_dim
+            adapter_bottleneck_dim=adapter_bottleneck_dim,
+            down_dims=down_dims
         )
         
         # ベースモデルのパラメータを凍結（アダプター層以外）

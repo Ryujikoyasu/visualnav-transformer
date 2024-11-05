@@ -118,7 +118,8 @@ def main(config):
     # Adapterモデルの作成
     model = NoMaDAdapter(
         base_model=base_model,
-        adapter_bottleneck_dim=config["adapter"]["bottleneck_dim"]
+        adapter_bottleneck_dim=config["adapter"]["bottleneck_dim"],
+        down_dims=config["down_dims"]
     )
     model = model.to(device)
     
