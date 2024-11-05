@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .nomad import NoMaD
-from .adapter_modules import add_adapter_to_transformer_layer
+from .adapter_modules import add_adapter_to_transformer_layer, DiffusionAdapter
 
 class NoMaDAdapter(nn.Module):
     """
@@ -11,16 +11,11 @@ class NoMaDAdapter(nn.Module):
         super().__init__()
         self.base_model = base_model
         
-        # アダプター層をtransformer層に組み込む
-        if hasattr(self.base_model.vision_encoder, 'sa_encoder'):
-            print("Found sa_encoder in vision_encoder")
-            for i, layer in enumerate(self.base_model.vision_encoder.sa_encoder.layers):
-                print(f"Layer {i} type:", type(layer))
-                if isinstance(layer, nn.TransformerEncoderLayer):
-                    print(f"Layer {i} is TransformerEncoderLayer")
-                    add_adapter_to_transformer_layer(layer, adapter_bottleneck_dim)
-                else:
-                    print(f"Warning: Layer {i} is not TransformerEncoderLayer")
+        # Diffusion PolicyにAdapterを追加
+        self.noise_pred_net = DiffusionAdapter(
+            base_unet=self.base_model.noise_pred_net,
+            adapter_bottleneck_dim=adapter_bottleneck_dim
+        )
         
         # ベースモデルのパラメータを凍結（アダプター層以外）
         for name, param in self.base_model.named_parameters():
@@ -75,10 +70,9 @@ class NoMaDAdapter(nn.Module):
         print(f"adapted_encoding shape: {adapted_encoding.shape}")
         
         # noise_pred_netを通す
-        noise_pred = self.base_model.forward(
-            func_name="noise_pred_net",
-            sample=noisy_actions,
-            timestep=timesteps,
+        noise_pred = self.noise_pred_net(
+            x=noisy_actions,
+            timesteps=timesteps,
             global_cond=adapted_encoding
         )
         print(f"noise_pred shape: {noise_pred.shape}")
