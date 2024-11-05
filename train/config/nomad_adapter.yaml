@@ -1,5 +1,5 @@
 # モデル設定
-model_type: "nomad_adapter"
+model_type: nomad_adapter
 vision_encoder: nomad_vint
 encoding_size: 256
 obs_encoder: efficientnet-b0
@@ -16,14 +16,14 @@ pretrained_path: "/ssd/source/navigation/visualnav-transformer/deployment/model_
 # Adapter固有の設定
 adapter:
   bottleneck_dim: 64
-  lr: 1e-4
+  lr: 1e-5
 
 # 学習設定
 train: True
 batch_size: 8
 num_workers: 4
 optimizer: adam
-lr: 1e-4
+lr: 1e-5
 num_epochs: 50
 
 # コンテキスト設定
@@ -41,7 +41,7 @@ datasets:
     train: /ssd/source/navigation/asset/nomad_adapter_dataset/processed_data/train
     test: /ssd/source/navigation/asset/nomad_adapter_dataset/processed_data/test
     goals_per_obs: 1
-    negative_mining: False
+    negative_mining: True
 
 # ロギング設定
 eval_freq: 5
@@ -62,7 +62,7 @@ image_size: [96, 96]
 # 学習率スケジューラの設定
 scheduler:
   name: "cosine"
-  num_warmup_steps: 0
+  num_warmup_steps: 1000
   num_cycles: 1
 
 # 距離の境界設定
