@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class AdapterLayer(nn.Module):
     """
-    Adapter層の基本実装
+    Transformer層に追加するAdapter層
     """
     def __init__(self, input_dim: int, bottleneck_dim: int):
         super().__init__()
@@ -20,6 +20,24 @@ class AdapterLayer(nn.Module):
         x = self.up_project(x)
         return x + residual
 
+class DiffusionAdapterLayer(nn.Module):
+    """
+    Diffusion Policy用のAdapter層
+    """
+    def __init__(self, channels: int, bottleneck_channels: int):
+        super().__init__()
+        self.down_conv = nn.Conv1d(channels, bottleneck_channels, 1)  # 1x1 conv
+        self.up_conv = nn.Conv1d(bottleneck_channels, channels, 1)    # 1x1 conv
+        self.norm = nn.GroupNorm(8, channels)  # UNetと同じGroupNormを使用
+        
+    def forward(self, x):
+        residual = x
+        x = self.norm(x)
+        x = self.down_conv(x)
+        x = F.mish(x)  # UNetと同じMish活性化関数
+        x = self.up_conv(x)
+        return x + residual
+
 class DiffusionAdapter(nn.Module):
     """
     Diffusion PolicyのUNetにAdapter層を追加するためのクラス
@@ -31,25 +49,27 @@ class DiffusionAdapter(nn.Module):
         
         # ダウンサンプリング層のAdapters（各解像度の最初のブロックのみ）
         self.down_adapters = nn.ModuleList([
-            AdapterLayer(dim, adapter_bottleneck_dim)
+            DiffusionAdapterLayer(dim, adapter_bottleneck_dim)
             for dim in down_dims
         ])
         
         # 中間層のAdapter（最初のブロックのみ）
-        self.mid_adapter = AdapterLayer(down_dims[-1], adapter_bottleneck_dim)
+        self.mid_adapter = DiffusionAdapterLayer(down_dims[-1], adapter_bottleneck_dim)
         
         # アップサンプリング層のAdapters（各解像度の最初のブロックのみ）
         self.up_adapters = nn.ModuleList([
-            AdapterLayer(dim, adapter_bottleneck_dim)
+            DiffusionAdapterLayer(dim, adapter_bottleneck_dim)
             for dim in reversed(down_dims)
         ])
     
     def forward(self, x, timesteps, global_cond):
         # Get dimensions
-        B, device = x.shape[0], x.device
+        B, seq_len, C = x.shape
+        device = x.device
         
-        # Reshape input: [B, seq_len, channels] -> [B, channels, seq_len]
-        x = x.transpose(1, 2)
+        # 形状の変更を明示的に行う
+        x = x.permute(0, 2, 1).contiguous()  # [B, seq_len, C] -> [B, C, seq_len]
+        print(f"Debug - x shape after permute: {x.shape}")  # デバッグ出力を追加
         
         # Timestep embedding
         t_emb = self.base_unet.diffusion_step_encoder(timesteps)
@@ -98,7 +118,7 @@ class DiffusionAdapter(nn.Module):
         # Final convolution
         x = self.base_unet.final_conv(x)
         
-        # Reshape output back: [B, channels, seq_len] -> [B, seq_len, channels]
-        x = x.transpose(1, 2)
+        # 最後に形状を戻す
+        x = x.permute(0, 2, 1).contiguous()  # [B, C, seq_len] -> [B, seq_len, C]
         
         return x
