@@ -44,11 +44,11 @@ datasets:
     negative_mining: True
 
 # ロギング設定
-eval_freq: 5
+eval_freq: 1
 print_log_freq: 10
 image_log_freq: 100
 num_images_log: 4
-eval_fraction: 0.25
+eval_fraction: 0.5
 project_name: nomad_adapter
 run_name: nomad_adapter
 use_wandb: True
