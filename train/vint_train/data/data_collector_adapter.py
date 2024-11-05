@@ -41,18 +41,22 @@ class DataCollector(Node):
         self.last_save_time = None
         self.min_save_interval = 1.0 / 4.0  # 4Hzでデータを保存
         
-        # Subscriberの設定
-        self.image_sub = Subscriber(self, Image, '/image_raw')
-        self.twist_sub = Subscriber(self, Twist, '/cmd_vel_mux/input/teleop')
-        
-        # 同期設定（緩めの設定に変更）
-        self.sync = ApproximateTimeSynchronizer(
-            [self.image_sub, self.twist_sub],
-            queue_size=5,
-            slop=0.1,  # 100msまでの時間差を許容
-            allow_headerless=True
+        # 同期せずに個別のSubscriberとして設定
+        self.image_sub = self.create_subscription(
+            Image,
+            '/image_raw',
+            self.image_callback,
+            10
         )
-        self.sync.registerCallback(self.sync_callback)
+        self.twist_sub = self.create_subscription(
+            Twist,
+            '/cmd_vel_mux/input/teleop',
+            self.twist_callback,
+            10
+        )
+        
+        # 最新のTwistメッセージを保持
+        self.latest_twist = None
         
         self.get_logger().info(f'Data collector initialized. Saving to {self.save_dir}')
         
@@ -119,7 +123,7 @@ class DataCollector(Node):
             self.is_recording = False
             self.get_logger().info(f'データの記録を終了します。保存フレーム数: {self.frame_count}')
 
-    def sync_callback(self, image_msg, twist_msg):
+    def image_callback(self, image_msg):
         if not self.is_recording:
             return
             
@@ -138,20 +142,24 @@ class DataCollector(Node):
             image_filename = os.path.join(self.save_dir, 'images', f'{timestamp}.jpg')
             cv2.imwrite(image_filename, cv_image)
             
-            # Twistデータの保存
-            twist_filename = os.path.join(self.save_dir, 'twists', f'{timestamp}.txt')
-            with open(twist_filename, 'w') as f:
-                f.write(f'{twist_msg.linear.x},{twist_msg.linear.y},{twist_msg.linear.z},'
-                       f'{twist_msg.angular.x},{twist_msg.angular.y},{twist_msg.angular.z}')
+            # 最新のTwistデータがある場合は保存
+            if self.latest_twist is not None:
+                twist_filename = os.path.join(self.save_dir, 'twists', f'{timestamp}.txt')
+                with open(twist_filename, 'w') as f:
+                    f.write(f'{self.latest_twist.linear.x},{self.latest_twist.linear.y},{self.latest_twist.linear.z},'
+                           f'{self.latest_twist.angular.x},{self.latest_twist.angular.y},{self.latest_twist.angular.z}')
             
             self.last_save_time = current_time
             self.frame_count += 1
             
-            if self.frame_count % 10 == 0:  # 10フレームごとにログを出力
+            if self.frame_count % 10 == 0:
                 self.get_logger().info(f'Saved {self.frame_count} frames')
                 
         except Exception as e:
-            self.get_logger().error(f'Error in sync_callback: {str(e)}')
+            self.get_logger().error(f'Error in image_callback: {str(e)}')
+    
+    def twist_callback(self, twist_msg):
+        self.latest_twist = twist_msg
 
 def main(args=None):
     rclpy.init(args=args)
