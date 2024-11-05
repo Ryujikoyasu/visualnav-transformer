@@ -33,11 +33,9 @@ def add_adapter_to_transformer_layer(transformer_layer: nn.TransformerEncoderLay
     # 元のforward関数を保存
     original_forward = transformer_layer.forward
     
-    def new_forward(src, src_mask=None, src_key_padding_mask=None, is_causal=None):
+    def new_forward(src, *args, **kwargs):
         # 元のforward関数を呼び出し
-        x = original_forward(src, src_mask=src_mask, 
-                           src_key_padding_mask=src_key_padding_mask,
-                           is_causal=is_causal)
+        x = original_forward(src, *args, **kwargs)
         # Adapter層を通す
         x = transformer_layer.attn_adapter(x)
         x = transformer_layer.ffn_adapter(x)
