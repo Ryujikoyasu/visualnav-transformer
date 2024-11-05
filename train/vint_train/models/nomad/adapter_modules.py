@@ -48,6 +48,9 @@ class DiffusionAdapter(nn.Module):
         # Get dimensions
         B, device = x.shape[0], x.device
         
+        # Reshape input: [B, seq_len, channels] -> [B, channels, seq_len]
+        x = x.transpose(1, 2)
+        
         # Timestep embedding
         t_emb = self.base_unet.diffusion_step_encoder(timesteps)
         
@@ -72,10 +75,8 @@ class DiffusionAdapter(nn.Module):
                 x = down_block[-1](x)
         
         # Middle
-        # 最初のブロックのみAdapterを適用
         x = self.base_unet.mid_modules[0](x, t_emb)
         x = self.mid_adapter(x)
-        # 2番目のブロックはAdapterなし
         x = self.base_unet.mid_modules[1](x, t_emb)
         
         # Upsampling
@@ -83,8 +84,8 @@ class DiffusionAdapter(nn.Module):
             x = torch.cat([x, h.pop()], dim=1)
             
             # 最初のレイヤーとAdapterを適用
-            x = up_block[0](x, t_emb)  # 最初のConditionalResidualBlock1D
-            x = self.up_adapters[i](x)  # Adapter
+            x = up_block[0](x, t_emb)
+            x = self.up_adapters[i](x)
             
             # 残りのレイヤーを適用（Adapterなし）
             for layer in up_block[1:-1]:
@@ -96,5 +97,8 @@ class DiffusionAdapter(nn.Module):
         
         # Final convolution
         x = self.base_unet.final_conv(x)
+        
+        # Reshape output back: [B, channels, seq_len] -> [B, seq_len, channels]
+        x = x.transpose(1, 2)
         
         return x
