@@ -23,94 +23,78 @@ class AdapterLayer(nn.Module):
 class DiffusionAdapter(nn.Module):
     """
     Diffusion PolicyのUNetにAdapter層を追加するためのクラス
+    各解像度レベルの最初のブロックにのみAdapterを配置
     """
     def __init__(self, base_unet, adapter_bottleneck_dim, down_dims):
         super().__init__()
         self.base_unet = base_unet
         
-        print("=== DiffusionAdapter Debug ===")
-        print(f"Specified down_dims: {down_dims}")
-        print("UNet structure:")
-        # モデルの構造を確認
-        for name, module in self.base_unet.named_children():
-            print(f"{name}: {module}")
-        
-        # ダウンサンプリング層のAdapters
+        # ダウンサンプリング層のAdapters（各解像度の最初のブロックのみ）
         self.down_adapters = nn.ModuleList([
             AdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in self.down_dims
+            for dim in down_dims
         ])
         
-        # 中間層のAdapter
-        self.mid_adapter = AdapterLayer(
-            self.down_dims[-1],
-            adapter_bottleneck_dim
-        )
+        # 中間層のAdapter（最初のブロックのみ）
+        self.mid_adapter = AdapterLayer(down_dims[-1], adapter_bottleneck_dim)
         
-        # アップサンプリング層のAdapters
+        # アップサンプリング層のAdapters（各解像度の最初のブロックのみ）
         self.up_adapters = nn.ModuleList([
             AdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in reversed(self.down_dims)
+            for dim in reversed(down_dims)
         ])
-        
-        # ベースモデルのパラメータを凍結
-        for param in self.base_unet.parameters():
-            param.requires_grad = False
     
     def forward(self, x, timesteps, global_cond):
-        """
-        Forward pass with adapters
-        Args:
-            x: input tensor
-            timesteps: diffusion timesteps
-            global_cond: global conditioning
-        """
         # Get dimensions
         B, device = x.shape[0], x.device
         
         # Timestep embedding
-        t_emb = self.base_unet.timestep_embedding(timesteps, self.base_unet.time_embed_dim)
-        t_emb = self.base_unet.time_embed(t_emb)
+        t_emb = self.base_unet.diffusion_step_encoder(timesteps)
         
         # Global conditioning
         if global_cond is not None:
-            g_emb = self.base_unet.global_proj(global_cond)
-            t_emb = t_emb + g_emb
-        
-        # Initial projection
-        x = self.base_unet.input_proj(x)
+            t_emb = t_emb + global_cond
         
         # Downsampling
-        h = [x]
-        for i, (resnet, downsample) in enumerate(self.base_unet.downs):
-            # Resnet blocks
-            x = resnet(x, t_emb)
-            # Apply adapter after each down block
-            x = self.down_adapters[i](x)
-            # Store for skip connection
+        h = []
+        for i, down_block in enumerate(self.base_unet.down_modules):
+            # 最初のレイヤーとAdapterを適用
+            x = down_block[0](x, t_emb)  # 最初のConditionalResidualBlock1D
+            x = self.down_adapters[i](x)  # Adapter
+            
+            # 残りのレイヤーを適用（Adapterなし）
+            for layer in down_block[1:-1]:
+                x = layer(x, t_emb)
+            
             h.append(x)
             # Downsample
-            if downsample is not None:
-                x = downsample(x)
+            if down_block[-1] is not None:
+                x = down_block[-1](x)
         
         # Middle
-        x = self.base_unet.mid(x, t_emb)
+        # 最初のブロックのみAdapterを適用
+        x = self.base_unet.mid_modules[0](x, t_emb)
         x = self.mid_adapter(x)
+        # 2番目のブロックはAdapterなし
+        x = self.base_unet.mid_modules[1](x, t_emb)
         
         # Upsampling
-        for i, (resnet, upsample) in enumerate(self.base_unet.ups):
-            # Get skip connection
-            x = torch.cat([x, h.pop()], dim=-1)
-            # Resnet blocks
-            x = resnet(x, t_emb)
-            # Apply adapter
-            x = self.up_adapters[i](x)
+        for i, up_block in enumerate(self.base_unet.up_modules):
+            x = torch.cat([x, h.pop()], dim=1)
+            
+            # 最初のレイヤーとAdapterを適用
+            x = up_block[0](x, t_emb)  # 最初のConditionalResidualBlock1D
+            x = self.up_adapters[i](x)  # Adapter
+            
+            # 残りのレイヤーを適用（Adapterなし）
+            for layer in up_block[1:-1]:
+                x = layer(x, t_emb)
+            
             # Upsample
-            if upsample is not None:
-                x = upsample(x)
+            if up_block[-1] is not None:
+                x = up_block[-1](x)
         
-        # Final projection
-        x = torch.cat([x, h.pop()], dim=-1)
-        x = self.base_unet.output_proj(x)
+        # Final convolution
+        x = self.base_unet.final_conv(x)
         
         return x
