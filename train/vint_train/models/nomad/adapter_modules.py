@@ -94,10 +94,6 @@ class DiffusionAdapter(nn.Module):
         print(f"Input x shape: {x.shape}")
         print(f"Global cond shape: {global_cond.shape}")
         
-        # Get dimensions
-        B, seq_len, C = x.shape
-        device = x.device
-        
         # タイムステップエンコーディング
         t_emb = self.base_unet.diffusion_step_encoder(timesteps)
         print(f"t_emb shape: {t_emb.shape}")  # デバッグ出力
