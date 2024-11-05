@@ -20,49 +20,30 @@ class AdapterLayer(nn.Module):
         x = self.up_project(x)
         return x + residual
 
-class AdapterTransformerBlock(nn.Module):
+def add_adapter_to_transformer_layer(transformer_layer: nn.TransformerEncoderLayer, adapter_bottleneck_dim: int):
     """
-    Adapterを組み込んだTransformerBlock
+    既存のTransformerEncoderLayerにAdapter層を追加する
     """
-    def __init__(self, base_transformer_block, adapter_bottleneck_dim):
-        super().__init__()
-        self.base_block = base_transformer_block
-        # 必要な属性を基のブロックから継承
-        self.self_attn = base_transformer_block.self_attn
-        self.norm1 = base_transformer_block.norm1
-        self.norm2 = base_transformer_block.norm2
-        self.dropout = base_transformer_block.dropout
-        self.linear1 = base_transformer_block.linear1
-        self.linear2 = base_transformer_block.linear2
-        self.activation = base_transformer_block.activation
-        self.batch_first = base_transformer_block.self_attn.batch_first
-        
-        # Adapter層の追加
-        self.adapter1 = AdapterLayer(
-            input_dim=base_transformer_block.norm1.normalized_shape[0],
-            bottleneck_dim=adapter_bottleneck_dim
-        )
-        self.adapter2 = AdapterLayer(
-            input_dim=base_transformer_block.norm2.normalized_shape[0],
-            bottleneck_dim=adapter_bottleneck_dim
-        )
-        
-    def forward(self, x, src_mask=None, src_key_padding_mask=None, is_causal=None):
-        # Self-attention + Adapter1
-        residual = x
-        x = self.norm1(x)
-        x = self.self_attn(x, x, x, attn_mask=src_mask,
-                          key_padding_mask=src_key_padding_mask,
-                          is_causal=is_causal)[0]
-        x = self.dropout(x)
-        x = self.adapter1(x)
-        x = x + residual
-        
-        # FFN + Adapter2
-        residual = x
-        x = self.norm2(x)
-        x = self.linear2(self.dropout(self.activation(self.linear1(x))))
-        x = self.dropout(x)
-        x = self.adapter2(x)
-        x = x + residual
+    input_dim = transformer_layer.linear2.out_features
+    
+    # Self-attention後のAdapter
+    attn_adapter = AdapterLayer(input_dim, adapter_bottleneck_dim)
+    
+    # FFN後のAdapter
+    ffn_adapter = AdapterLayer(input_dim, adapter_bottleneck_dim)
+    
+    # 元のforward関数を保存
+    original_forward = transformer_layer.forward
+    
+    def new_forward(src, src_mask=None, src_key_padding_mask=None):
+        # 元のforward関数を呼び出し
+        x = original_forward(src, src_mask, src_key_padding_mask)
+        # Adapter層を通す
+        x = attn_adapter(x)
+        x = ffn_adapter(x)
         return x
+    
+    # 新しいforward関数を設定
+    transformer_layer.forward = new_forward.__get__(transformer_layer)
+    
+    return transformer_layer

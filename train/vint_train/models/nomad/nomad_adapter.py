@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from .nomad import NoMaD
-from .adapter_modules import AdapterTransformerBlock
+from .adapter_modules import AdapterTransformerBlock, add_adapter_to_transformer_layer
 
 class NoMaDAdapter(nn.Module):
     """
@@ -13,9 +13,8 @@ class NoMaDAdapter(nn.Module):
         
         # アダプター層をtransformer層に組み込む
         if hasattr(self.base_model.vision_encoder, 'sa_encoder'):
-            for name, block in self.base_model.vision_encoder.sa_encoder.layers.named_children():
-                adapted_block = AdapterTransformerBlock(block, adapter_bottleneck_dim)
-                setattr(self.base_model.vision_encoder.sa_encoder.layers, name, adapted_block)
+            for layer in self.base_model.vision_encoder.sa_encoder.layers:
+                add_adapter_to_transformer_layer(layer, adapter_bottleneck_dim)
         
         # ベースモデルのパラメータを凍結（アダプター層以外）
         for name, param in self.base_model.named_parameters():
