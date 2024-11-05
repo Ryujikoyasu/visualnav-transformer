@@ -76,8 +76,8 @@ class DataCollector(Node):
             raise RuntimeError('Joy-Con が見つかりません')
 
         # ボタン設定
-        self.button_a = 2
-        self.button_b = 1
+        self.button_a = 1
+        self.button_b = 2
         
         # 状態管理
         self.is_recording = False
