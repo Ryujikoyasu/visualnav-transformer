@@ -81,17 +81,17 @@ class ExplorationAdapter(Node):
         # ベースモデルの読み込み
         base_model = load_model(model_paths[self.args.model]["ckpt_path"], self.model_params, device)
         
-        # アダプターモデルの初期化
+        # アダプターモデルの初期化（Diffusion Policy用）
         self.model = NoMaDAdapter(
             base_model=base_model,
-            adapter_bottleneck_dim=self.model_params["adapter"]["bottleneck_dim"]
+            adapter_bottleneck_dim=self.model_params["adapter"]["bottleneck_dim"],
+            down_dims=self.model_params["down_dims"]  # down_dimsを追加
         ).to(device)
 
         # 複数のアダプターの読み込み
         for task_name, adapter_path in model_paths[self.args.model]["adapter_path"].items():
             if os.path.exists(adapter_path):
                 self.get_logger().info(f"Loading adapter for task {task_name} from {adapter_path}")
-                # ファイルからアダプターの状態を読み込む
                 adapter_state = torch.load(adapter_path, map_location=device)
                 self.adapters[task_name] = adapter_state
             else:
