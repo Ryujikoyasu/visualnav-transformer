@@ -38,9 +38,9 @@ class JoyTeleop(Node):
             sys.exit(1)
             
         # 制御パラメータ
-        self.linear_speed = 0.2  # 直進速度（固定）
-        self.angular_speed_slow = -0.2  # L1押下時の回転速度
-        self.angular_speed_fast = -0.4  # L2押下時の回転速度
+        self.linear_speed = 0.6  # 直進速度（固定）
+        self.angular_speed_slow = -0.6  # L1押下時の回転速度
+        self.angular_speed_fast = -0.9  # L2押下時の回転速度
         
         # ボタン設定
         self.slow_button = 15  # L1 button (低速回転)

@@ -9,7 +9,7 @@ twist_mux:
     - name: teleop
       topic: /cmd_vel_mux/input/teleop
       timeout: 0.5
-      priority: 130
+      priority: 110
       short_desc: "Teleoperation velocity commands"
       
     - name: gnm_recovery

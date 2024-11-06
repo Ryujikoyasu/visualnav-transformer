@@ -19,4 +19,4 @@ nomad_adapter:  # nomad_adapterの設定を追加
   ckpt_path: "../../deployment/model_weights/nomad.pth"  # ベースモデルのパス
   adapter_path:
     task1: "/ssd/source/navigation/visualnav-transformer/train/experiments/nomad_adapter/nomad_adapter_exe/adapter_49_20241105_202910.pth"
-    # task2: "/ssd/source/navigation/visualnav-transformer/train/experiments/nomad_adapter/nomad_adapter_exe/adapter_dp_19.pth"
+    # task1: "/ssd/source/navigation/visualnav-transformer/train/experiments/nomad_adapter/nomad_adapter_exe/adapter_dp_19.pth"
