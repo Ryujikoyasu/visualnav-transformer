@@ -90,92 +90,92 @@ class DiffusionAdapter(nn.Module):
             for dim in up_dims
         ])
         
-        # デバッグ用の次元出力
-        print(f"Time embedding dim: {self.time_embed_dim}")
-        print(f"Down dims: {down_dims}")
-        print(f"Adapter bottleneck dim: {adapter_bottleneck_dim}")
+        # # デバッグ用の次元出力
+        # print(f"Time embedding dim: {self.time_embed_dim}")
+        # print(f"Down dims: {down_dims}")
+        # print(f"Adapter bottleneck dim: {adapter_bottleneck_dim}")
     
     def forward(self, x, timesteps, global_cond):
-        print("\n=== DiffusionAdapter Forward Pass Debug ===")
-        print(f"Input x shape: {x.shape}")
-        print(f"Global cond shape: {global_cond.shape}")
+        # print("\n=== DiffusionAdapter Forward Pass Debug ===")
+        # print(f"Input x shape: {x.shape}")
+        # print(f"Global cond shape: {global_cond.shape}")
         
         # タイムステップエンコーディング
         t_emb = self.base_unet.diffusion_step_encoder(timesteps)
-        print(f"t_emb shape: {t_emb.shape}")
+        # print(f"t_emb shape: {t_emb.shape}")
         
         # Global conditioningの次元を調整（Noneチェックを明示的に）
         if global_cond is not None:
             global_cond = self.cond_proj(global_cond)
-            print(f"projected global_cond shape: {global_cond.shape}")
+            # print(f"projected global_cond shape: {global_cond.shape}")
             
             # t_embの次元をglobal_condに合わせる
             t_emb = torch.cat([t_emb, torch.zeros_like(global_cond[:, :256])], dim=1)
-            print(f"expanded t_emb shape: {t_emb.shape}")
+            # print(f"expanded t_emb shape: {t_emb.shape}")
             
             t_emb = t_emb + global_cond
         
         # 形状の変更を明示的に行う
         x = x.permute(0, 2, 1).contiguous()
-        print(f"After permute, x shape: {x.shape}")
+        # print(f"After permute, x shape: {x.shape}")
         
         # Downsampling
         h = []
         for i, down_block in enumerate(self.base_unet.down_modules):
             # 最初のレイヤーとAdapterを適用
             x = down_block[0](x, t_emb)
-            print(f"After down_block[0] in block {i}, shape: {x.shape}")
+            # print(f"After down_block[0] in block {i}, shape: {x.shape}")
             x = self.down_adapters[i](x)
-            print(f"After down_adapter in block {i}, shape: {x.shape}")
+            # print(f"After down_adapter in block {i}, shape: {x.shape}")
             
             # 残りのレイヤーを適用（Adapterなし）
             for j, layer in enumerate(down_block[1:-1]):
                 x = layer(x, t_emb)
-                print(f"After down_block[{j+1}] in block {i}, shape: {x.shape}")
+                # print(f"After down_block[{j+1}] in block {i}, shape: {x.shape}")
             
             h.append(x)
             # Downsample
             if down_block[-1] is not None:
                 x = down_block[-1](x)
-                print(f"After downsample in block {i}, shape: {x.shape}")
+                # print(f"After downsample in block {i}, shape: {x.shape}")
         
         # Middle
-        print("\nMiddle block:")
+        # print("\nMiddle block:")
         x = self.base_unet.mid_modules[0](x, t_emb)
-        print(f"After mid_module[0], shape: {x.shape}")
+        # print(f"After mid_module[0], shape: {x.shape}")
         x = self.mid_adapter(x)
-        print(f"After mid_adapter, shape: {x.shape}")
+        # print(f"After mid_adapter, shape: {x.shape}")
         x = self.base_unet.mid_modules[1](x, t_emb)
-        print(f"After mid_module[1], shape: {x.shape}")
+        # print(f"After mid_module[1], shape: {x.shape}")
         
         # Upsampling
-        print("\nUpsampling blocks:")
+        # print("\nUpsampling blocks:")
         for i, up_block in enumerate(self.base_unet.up_modules):
             x = torch.cat([x, h.pop()], dim=1)
-            print(f"After concat in up_block {i}, shape: {x.shape}")
+            # print(f"After concat in up_block {i}, shape: {x.shape}")
             
             x = up_block[0](x, t_emb)
-            print(f"After up_block[0] in block {i}, shape: {x.shape}")
+            # print(f"After up_block[0] in block {i}, shape: {x.shape}")
             x = self.up_adapters[i](x)
-            print(f"After up_adapter in block {i}, shape: {x.shape}")
+            # print(f"After up_adapter in block {i}, shape: {x.shape}")
             
             for j, layer in enumerate(up_block[1:-1]):
                 x = layer(x, t_emb)
-                print(f"After up_block[{j+1}] in block {i}, shape: {x.shape}")
+                # print(f"After up_block[{j+1}] in block {i}, shape: {x.shape}")
             
             if up_block[-1] is not None:
                 x = up_block[-1](x)
-                print(f"After upsample in block {i}, shape: {x.shape}")
+                # print(f"After upsample in block {i}, shape: {x.shape}")
         
         # Final convolution
-        print("\nFinal convolution:")
-        print(f"Before final_conv, shape: {x.shape}")
+        # print("\nFinal convolution:")
+        # print(f"Before final_conv, shape: {x.shape}")
         x = self.base_unet.final_conv(x)
-        print(f"After final_conv, shape: {x.shape}")
+        # print(f"After final_conv, shape: {x.shape}")
         
         # Reshape output back
         x = x.transpose(1, 2)
-        print(f"Final output shape: {x.shape}")
-        print("===================================\n")
+        # print(f"Final output shape: {x.shape}")
+        # print("===================================\n")
         
         return x

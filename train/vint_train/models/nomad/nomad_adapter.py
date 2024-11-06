@@ -40,11 +40,11 @@ class NoMaDAdapter(nn.Module):
         self.load_state_dict(current_state)
 
     def forward(self, obs_img, goal_image, noisy_actions, timesteps):
-        print("\n=== NoMaDAdapter Forward Pass Debug ===")
-        print(f"Input shapes:")
-        print(f"obs_img: {obs_img.shape}")
-        print(f"goal_image: {goal_image.shape}")
-        print(f"noisy_actions: {noisy_actions.shape}")
+        # print("\n=== NoMaDAdapter Forward Pass Debug ===")
+        # print(f"Input shapes:")
+        # print(f"obs_img: {obs_img.shape}")
+        # print(f"goal_image: {goal_image.shape}")
+        # print(f"noisy_actions: {noisy_actions.shape}")
         
         batch_size = obs_img.size(0)
         device = obs_img.device
@@ -62,17 +62,17 @@ class NoMaDAdapter(nn.Module):
             goal_img=goal_image,
             input_goal_mask=goal_mask  # 修正: goal_maskを渡す
         )
-        print(f"obs_encoding shape: {obs_encoding.shape}")
+        # print(f"obs_encoding shape: {obs_encoding.shape}")
         
         # Adapterを通す
         adapted_encoding = obs_encoding
         if hasattr(self.base_model.vision_encoder, 'sa_encoder'):
             for block in self.base_model.vision_encoder.sa_encoder.layers:
                 adapted_encoding = block(adapted_encoding)
-        print(f"adapted_encoding shape: {adapted_encoding.shape}")
+        # print(f"adapted_encoding shape: {adapted_encoding.shape}")
         
         # noise_pred_netを通す前に次元を確認
-        print(f"Before noise_pred_net - adapted_encoding shape: {adapted_encoding.shape}")
+        # print(f"Before noise_pred_net - adapted_encoding shape: {adapted_encoding.shape}")
         
         # noise_pred_netを通す
         noise_pred = self.noise_pred_net(
@@ -80,9 +80,9 @@ class NoMaDAdapter(nn.Module):
             timesteps=timesteps,
             global_cond=adapted_encoding
         )
-        print(f"noise_pred shape: {noise_pred.shape}")
+        # print(f"noise_pred shape: {noise_pred.shape}")
         
-        print("===================================\n")
+        # print("===================================\n")
         
         return noise_pred
     
