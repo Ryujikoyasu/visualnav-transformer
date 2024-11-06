@@ -110,13 +110,13 @@ def train_eval_loop_nomad_adapter(
 
             # アダプターのパラメータのみを抽出して保存
             adapter_state_dict = {
-                name: param.state_dict() 
-                for name, param in model.named_modules() 
-                if isinstance(param, AdapterLayer)
+                name: param
+                for name, param in model.state_dict().items()
+                if any(key in name for key in ['down_adapters', 'mid_adapter', 'up_adapters', 'cond_proj'])
             }
             adapter_path = os.path.join(project_folder, f"adapter_{epoch}_{timestamp}.pth")
             torch.save(adapter_state_dict, adapter_path)
-            print(f"Saved checkpoint at epoch {epoch}")
+            print(f"Saved adapter parameters to {adapter_path}")
 
         # 評価
         if (epoch + 1) % eval_freq == 0:
