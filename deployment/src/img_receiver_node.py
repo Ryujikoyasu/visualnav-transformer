@@ -20,15 +20,25 @@ class ImageReceiverNode(Node):
         
         # ソケット通信の設定
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # ソケットの再利用を許可
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        
         host_ip = '0.0.0.0'
         port = 9999
         socket_address = (host_ip, port)
-        self.server_socket.bind(socket_address)
-        self.server_socket.listen(5)
         
-        self.get_logger().info("Waiting for connection...")
-        self.client_socket, self.addr = self.server_socket.accept()
-        self.get_logger().info(f"Connected to: {self.addr}")
+        try:
+            self.server_socket.bind(socket_address)
+            self.server_socket.listen(5)
+            
+            self.get_logger().info("Waiting for connection...")
+            self.client_socket, self.addr = self.server_socket.accept()
+            self.get_logger().info(f"Connected to: {self.addr}")
+            
+        except Exception as e:
+            self.get_logger().error(f"Socket error: {str(e)}")
+            self.cleanup()
+            raise
         
         # 受信用のデータバッファ
         self.data = b""
@@ -36,6 +46,19 @@ class ImageReceiverNode(Node):
         
         # タイマーコールバックの設定
         self.create_timer(0.01, self.timer_callback)  # 100Hz for smooth operation
+
+    def cleanup(self):
+        """ソケットをクリーンアップする"""
+        try:
+            if hasattr(self, 'client_socket'):
+                self.client_socket.close()
+            if hasattr(self, 'server_socket'):
+                self.server_socket.close()
+        except Exception as e:
+            self.get_logger().error(f"Cleanup error: {str(e)}")
+
+    def __del__(self):
+        self.cleanup()
 
     def timer_callback(self):
         try:
@@ -63,17 +86,24 @@ class ImageReceiverNode(Node):
             
         except Exception as e:
             self.get_logger().error(f"Error: {str(e)}")
-
-    def __del__(self):
-        self.client_socket.close()
-        self.server_socket.close()
+            self.cleanup()
+            raise
 
 def main(args=None):
     rclpy.init(args=args)
-    node = ImageReceiverNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    
+    try:
+        node = ImageReceiverNode()
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"Error: {str(e)}")
+    finally:
+        if 'node' in locals():
+            node.cleanup()
+            node.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
