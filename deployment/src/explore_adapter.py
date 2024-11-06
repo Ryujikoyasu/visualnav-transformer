@@ -81,18 +81,21 @@ class ExplorationAdapter(Node):
         # ベースモデルの読み込み
         base_model = load_model(model_paths[self.args.model]["ckpt_path"], self.model_params, device)
         
-        # アダプターモデルの初期化（Diffusion Policy用）
+        # アダプターモデルの初期化
         self.model = NoMaDAdapter(
             base_model=base_model,
             adapter_bottleneck_dim=self.model_params["adapter"]["bottleneck_dim"],
-            down_dims=self.model_params["down_dims"]  # down_dimsを追加
+            down_dims=self.model_params["down_dims"]
         ).to(device)
 
         # 複数のアダプターの読み込み
         for task_name, adapter_path in model_paths[self.args.model]["adapter_path"].items():
             if os.path.exists(adapter_path):
                 self.get_logger().info(f"Loading adapter for task {task_name} from {adapter_path}")
+                # アダプターの状態を読み込む
                 adapter_state = torch.load(adapter_path, map_location=device)
+                # noise_pred_netのキーを追加
+                adapter_state = {f'noise_pred_net.{k}': v for k, v in adapter_state.items()}
                 self.adapters[task_name] = adapter_state
             else:
                 raise FileNotFoundError(f"Adapter weights not found at {adapter_path}")
