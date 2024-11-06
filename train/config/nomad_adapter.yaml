@@ -56,7 +56,7 @@ use_wandb: True
 # その他の設定
 normalize: True
 goal_type: "image"
-goal_mask_prob: 1.0
+goal_mask_prob: 0.5
 image_size: [96, 96]
 
 # 学習率スケジューラの設定
