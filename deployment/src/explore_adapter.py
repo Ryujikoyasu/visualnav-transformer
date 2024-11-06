@@ -72,19 +72,21 @@ class ExplorationAdapter(Node):
         with open(MODEL_CONFIG_PATH, "r") as f:
             model_paths = yaml.safe_load(f)
 
+        # デバッグ出力を追加
+        print("Available models:", model_paths.keys())
+        print(f"Selected model: {self.args.model}")
+        print(f"Model config: {model_paths[self.args.model]}")
+
         model_config_path = model_paths[self.args.model]["config_path"]
-        print(f"Loading config from: {model_config_path}")  # デバッグ出力
+        print(f"Loading config from: {model_config_path}")
         
         with open(model_config_path, "r") as f:
             self.model_params = yaml.safe_load(f)
-        
-        print("Model params:", self.model_params)  # デバッグ出力
         
         # adapterキーが存在することを確認
         if "adapter" not in self.model_params:
             print("Warning: 'adapter' key not found in model_params")
             print("Available keys:", self.model_params.keys())
-            # デフォルト値を設定
             self.model_params["adapter"] = {"bottleneck_dim": 64}
 
         self.context_size = self.model_params["context_size"]
@@ -99,13 +101,15 @@ class ExplorationAdapter(Node):
             down_dims=self.model_params["down_dims"]
         ).to(device)
 
+        # adapter_pathの存在確認
+        if "adapter_path" not in model_paths[self.args.model]:
+            raise KeyError(f"'adapter_path' not found in config for model {self.args.model}")
+
         # 複数のアダプターの読み込み
         for task_name, adapter_path in model_paths[self.args.model]["adapter_path"].items():
             if os.path.exists(adapter_path):
                 self.get_logger().info(f"Loading adapter for task {task_name} from {adapter_path}")
-                # アダプターの状態を読み込む
                 adapter_state = torch.load(adapter_path, map_location=device)
-                # noise_pred_netのキーを追加
                 adapter_state = {f'noise_pred_net.{k}': v for k, v in adapter_state.items()}
                 self.adapters[task_name] = adapter_state
             else:
