@@ -73,17 +73,21 @@ class DiffusionAdapter(nn.Module):
         # Global conditioningの次元を合わせる
         self.cond_proj = nn.Linear(256, 512)  # base_unet次元に合わせる
         
-        # 各解像度のAdapterの次元を確認
+        # Down path adapters (64->128->256)
         self.down_adapters = nn.ModuleList([
             DiffusionAdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in down_dims
+            for dim in down_dims  # [64, 128, 256]
         ])
         
+        # Middle adapter (256)
         self.mid_adapter = DiffusionAdapterLayer(down_dims[-1], adapter_bottleneck_dim)
         
+        # Up path adapters (128->64)
+        # ConditionalUnet1Dの出力チャネル数に合わせる
+        up_dims = [128, 64]  # up_blockの出力チャネル数
         self.up_adapters = nn.ModuleList([
             DiffusionAdapterLayer(dim, adapter_bottleneck_dim)
-            for dim in reversed(down_dims)
+            for dim in up_dims
         ])
         
         # デバッグ用の次元出力
