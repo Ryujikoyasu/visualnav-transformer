@@ -149,9 +149,20 @@ class ExplorationAdapter(Node):
             obs_images = torch.cat(obs_images, dim=1) 
             obs_images = obs_images.to(device)
             fake_goal = torch.randn((1, 3, *self.model_params["image_size"])).to(device)
+            mask = torch.ones(1).long().to(device)
 
             with torch.no_grad():
-                # アダプターモデルを使用して予測
+                # vision_encoderを通す
+                obs_cond = self.model.base_model('vision_encoder', 
+                                               obs_img=obs_images, 
+                                               goal_img=fake_goal, 
+                                               input_goal_mask=mask)
+                
+                if len(obs_cond.shape) == 2:
+                    obs_cond = obs_cond.repeat(self.args.num_samples, 1)
+                else:
+                    obs_cond = obs_cond.repeat(self.args.num_samples, 1, 1)
+                
                 noisy_action = torch.randn(
                     (self.args.num_samples, self.model_params["len_traj_pred"], 2), device=device)
                 naction = noisy_action
@@ -160,7 +171,13 @@ class ExplorationAdapter(Node):
 
                 start_time = time.time()
                 for k in self.noise_scheduler.timesteps[:]:
-                    noise_pred = self.model(obs_images, fake_goal, naction, k)
+                    # noise_pred_netを通す
+                    noise_pred = self.model.noise_pred_net(
+                        x=naction,
+                        timesteps=k,
+                        global_cond=obs_cond
+                    )
+
                     naction = self.noise_scheduler.step(
                         model_output=noise_pred,
                         timestep=k,
