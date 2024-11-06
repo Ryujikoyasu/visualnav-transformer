@@ -171,10 +171,14 @@ class ExplorationAdapter(Node):
 
                 start_time = time.time()
                 for k in self.noise_scheduler.timesteps[:]:
+                    # timestepsをバッチサイズに合わせて拡張
+                    timesteps = torch.tensor([k] * self.args.num_samples, device=device)
+                    
                     # noise_pred_netを通す
-                    noise_pred = self.model.noise_pred_net(
-                        x=naction,
-                        timesteps=k,
+                    noise_pred = self.model.base_model(
+                        'noise_pred_net',
+                        sample=naction,
+                        timestep=timesteps,
                         global_cond=obs_cond
                     )
 
