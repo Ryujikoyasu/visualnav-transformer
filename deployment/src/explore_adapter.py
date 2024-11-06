@@ -73,8 +73,19 @@ class ExplorationAdapter(Node):
             model_paths = yaml.safe_load(f)
 
         model_config_path = model_paths[self.args.model]["config_path"]
+        print(f"Loading config from: {model_config_path}")  # デバッグ出力
+        
         with open(model_config_path, "r") as f:
             self.model_params = yaml.safe_load(f)
+        
+        print("Model params:", self.model_params)  # デバッグ出力
+        
+        # adapterキーが存在することを確認
+        if "adapter" not in self.model_params:
+            print("Warning: 'adapter' key not found in model_params")
+            print("Available keys:", self.model_params.keys())
+            # デフォルト値を設定
+            self.model_params["adapter"] = {"bottleneck_dim": 64}
 
         self.context_size = self.model_params["context_size"]
 
