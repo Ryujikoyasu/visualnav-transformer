@@ -60,6 +60,8 @@ private:
         latest_messages_[topic_name] = *msg;
         last_received_time_[topic_name] = now;
 
+        RCLCPP_INFO(this->get_logger(), "Received message from topic: %s", topic_name.c_str());
+
         updateActiveTopics();
         publishHighestPriorityMessage();
     }
@@ -70,8 +72,7 @@ private:
         active_topics_.clear();
 
         for (const auto& [topic, last_time] : last_received_time_) {
-            double elapsed_time = (now - last_time).seconds();
-            if (elapsed_time <= topic_timeouts_[topic]) {
+            if ((now - last_time).seconds() <= topic_timeouts_[topic]) {
                 active_topics_.insert(topic);
             }
         }
@@ -90,36 +91,20 @@ private:
             }
         }
 
-        if (selected_topic.empty() && !latest_messages_.empty()) {
-            highest_priority = -1;
-            auto now = this->now();
-
-            for (const auto& [topic, msg] : latest_messages_) {
-                int priority = topic_priorities_[topic];
-                double elapsed_time = (now - last_received_time_[topic]).seconds();
-                
-                if (priority > highest_priority) {
-                    bool higher_priority_active = false;
-                    
-                    for (const auto& [other_topic, other_time] : last_received_time_) {
-                        if (topic_priorities_[other_topic] > priority && 
-                            (now - other_time).seconds() <= topic_timeouts_[other_topic]) {
-                            higher_priority_active = true;
-                            break;
-                        }
-                    }
-
-                    if (!higher_priority_active) {
-                        highest_priority = priority;
-                        selected_topic = topic;
-                    }
-                }
-            }
-        }
-
         if (!selected_topic.empty()) {
             publisher_->publish(latest_messages_[selected_topic]);
-            RCLCPP_DEBUG(this->get_logger(), "Publishing message from topic: %s", selected_topic.c_str());
+            RCLCPP_INFO(this->get_logger(), 
+                "Publishing message from topic: %s (priority: %d)", 
+                selected_topic.c_str(), 
+                topic_priorities_[selected_topic]);
+            
+            std::string active_topics_str = "Active topics: ";
+            for (const auto& topic : active_topics_) {
+                active_topics_str += topic + ", ";
+            }
+            RCLCPP_INFO(this->get_logger(), "%s", active_topics_str.c_str());
+        } else {
+            RCLCPP_INFO(this->get_logger(), "No topic selected for publishing");
         }
     }
 
