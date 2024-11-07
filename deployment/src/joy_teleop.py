@@ -76,27 +76,30 @@ class JoyTeleop(Node):
         msg = Twist()
         x, y = self.current_hat
         
-        # ボタンの状態に応じて角速度を設定
-        if self.slow_enabled:
-            angular_speed = self.angular_speed_slow
-        elif self.fast_enabled:
-            angular_speed = self.angular_speed_fast
+        # L1またはL2が押されているときのみ処理を行う
+        if self.slow_enabled or self.fast_enabled:
+            # ボタンの状態に応じて角速度を設定
+            if self.slow_enabled:
+                angular_speed = self.angular_speed_slow
+            elif self.fast_enabled:
+                angular_speed = self.angular_speed_fast
+            
+            # 速度指令値の設定
+            msg.linear.x = -x * self.linear_speed
+            msg.angular.z = y * angular_speed
+            
+            # 速度指令値をパブリッシュ
+            self.publisher.publish(msg)
+            
+            # 実際の値をログ出力（値が0でない場合のみ）
+            if abs(msg.linear.x) > 0.01 or abs(msg.angular.z) > 0.01:
+                self.get_logger().info(
+                    f'HAT: {self.current_hat}, L1: {self.slow_enabled}, L2: {self.fast_enabled}, '
+                    f'Vel: ({msg.linear.x:.2f}, {msg.angular.z:.2f})'
+                )
         else:
-            angular_speed = 0.0
-        
-        # 速度指令値の設定
-        msg.linear.x = -x * self.linear_speed
-        msg.angular.z = y * angular_speed
-        
-        # 速度指令値をパブリッシュ
-        self.publisher.publish(msg)
-        
-        # 実際の値をログ出力（値が0でない場合のみ）
-        if abs(msg.linear.x) > 0.01 or abs(msg.angular.z) > 0.01:
-            self.get_logger().info(
-                f'HAT: {self.current_hat}, L1: {self.slow_enabled}, L2: {self.fast_enabled}, '
-                f'Vel: ({msg.linear.x:.2f}, {msg.angular.z:.2f})'
-            )
+            # L1もL2も押されていない場合は停止命令を送信
+            self.publisher.publish(msg)  # msg は全ての値が0の Twist メッセージ
 
 def main():
     rclpy.init()
